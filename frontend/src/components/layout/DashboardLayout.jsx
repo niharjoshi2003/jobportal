@@ -11,6 +11,9 @@ const DashboardLayout = () => {
         return <Navigate to="/login" replace />;
     }
 
+    if (user.role === 'admin') {
+        return <Navigate to="/admin/overview" replace />;
+    }
     if (user.role === 'recruiter') {
         return <Navigate to="/admin/companies" replace />;
     }

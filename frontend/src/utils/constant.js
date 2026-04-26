@@ -8,6 +8,7 @@ export const INTERNSHIP_API_END_POINT = `${BASE}/internship`;
 export const INTERVIEW_API_END_POINT = `${BASE}/interview`;
 export const TESTIMONIAL_API_END_POINT = `${BASE}/testimonial`;
 export const BOOKMARK_API_END_POINT = `${BASE}/bookmark`;
+export const ADMIN_API_END_POINT = `${BASE}/admin`;
 
 export const PREDEFINED_SKILLS = [
     "Construction Modeling",

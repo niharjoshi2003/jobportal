@@ -10,12 +10,23 @@ import { setUser } from '@/redux/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 
+const applicantIdOf = (a) => {
+    if (!a) return null;
+    if (typeof a === 'string') return a;
+    if (a.applicant) {
+        return typeof a.applicant === 'string' ? a.applicant : a.applicant?._id || null;
+    }
+    return a._id || null;
+};
+
 const JobDescription = () => {
     const { singleJob } = useSelector(store => store.job);
     const { user } = useSelector(store => store.auth);
-    const isIntiallyApplied = singleJob?.applications?.some(application => application.applicant === user?._id) || false;
-    const [isApplied, setIsApplied] = useState(isIntiallyApplied);
+    const computeIsApplied = (job) =>
+        !!job?.applications?.some(a => applicantIdOf(a) === user?._id);
+    const [isApplied, setIsApplied] = useState(computeIsApplied(singleJob));
     const isBookmarked = user?.bookmarkedJobs?.includes(singleJob?._id);
+    const isStudent = user?.role === 'student';
 
     const params = useParams();
     const jobId = params.id;
@@ -57,7 +68,7 @@ const JobDescription = () => {
                 const res = await axios.get(`${JOB_API_END_POINT}/get/${jobId}`, { withCredentials: true });
                 if (res.data.success) {
                     dispatch(setSingleJob(res.data.job));
-                    setIsApplied(res.data.job.applications.some(application => application.applicant === user?._id));
+                    setIsApplied(computeIsApplied(res.data.job));
                 }
             } catch (error) {
                 console.log(error);
@@ -91,13 +102,15 @@ const JobDescription = () => {
                         <button className="p-2.5 rounded-lg border border-border hover:bg-white/10 text-muted-foreground transition-colors">
                             <Share2 size={18} />
                         </button>
-                        <Button
-                            onClick={isApplied ? null : applyJobHandler}
-                            disabled={isApplied}
-                            className={`px-6 ${isApplied ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary hover:bg-primary/90 text-white'}`}
-                        >
-                            {isApplied ? 'Already Applied' : 'Apply Now'}
-                        </Button>
+                        {isStudent && (
+                            <Button
+                                onClick={isApplied ? null : applyJobHandler}
+                                disabled={isApplied}
+                                className={`px-6 ${isApplied ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary hover:bg-primary/90 text-white'}`}
+                            >
+                                {isApplied ? 'Already Applied' : 'Apply Now'}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>

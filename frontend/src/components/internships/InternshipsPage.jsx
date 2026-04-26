@@ -4,7 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import InternshipCard from './InternshipCard';
-import useGetAllJobs from '@/hooks/useGetAllJobs';
+import useGetAllInternships from '@/hooks/useGetAllInternships';
+import useGetAppliedInternships from '@/hooks/useGetAppliedInternships';
 
 const tabs = [
     { key: 'open', label: 'Open' },
@@ -16,12 +17,14 @@ const tabs = [
 ];
 
 const locationFilters = ['All', 'Japan', 'Remote', 'India', 'USA'];
-const typeFilters = ['All', 'Full Time', 'Part Time', 'Internship', 'Contract'];
+const typeFilters = ['All', 'Remote', 'On-site', 'Hybrid'];
 
 const InternshipsPage = () => {
-    useGetAllJobs();
+    useGetAllInternships();
+    useGetAppliedInternships();
+
     const [searchParams, setSearchParams] = useSearchParams();
-    const { allJobs, allAppliedJobs } = useSelector(store => store.job);
+    const { allInternships, appliedInternships } = useSelector(store => store.internship);
     const { user } = useSelector(store => store.auth);
 
     const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'open');
@@ -37,62 +40,67 @@ const InternshipsPage = () => {
         }
     }, [searchParams]);
 
-    const appliedJobIds = allAppliedJobs?.map(app => app.job?._id) || [];
-    const bookmarkedJobIds = user?.bookmarkedJobs || [];
+    const appliedInternshipIds = appliedInternships?.map(app => app.internship?._id).filter(Boolean) || [];
+    const bookmarkedIds = user?.bookmarkedJobs || [];
 
-    const getFilteredJobs = () => {
-        let filtered = [...(allJobs || [])];
+    const getFilteredInternships = () => {
+        let filtered = [...(allInternships || [])];
 
         if (searchQuery) {
-            filtered = filtered.filter(j =>
-                j.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                j.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                j.company?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+            filtered = filtered.filter(i =>
+                i.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                i.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                i.company?.name?.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
 
         if (locationFilter !== 'All') {
-            filtered = filtered.filter(j =>
-                j.location?.toLowerCase().includes(locationFilter.toLowerCase())
+            filtered = filtered.filter(i =>
+                i.location?.toLowerCase().includes(locationFilter.toLowerCase())
             );
         }
 
         if (typeFilter !== 'All') {
-            filtered = filtered.filter(j =>
-                j.jobType?.toLowerCase() === typeFilter.toLowerCase()
+            filtered = filtered.filter(i =>
+                i.locationType?.toLowerCase() === typeFilter.toLowerCase()
             );
         }
 
         switch (activeTab) {
             case 'bookmarked':
-                return filtered.filter(j => bookmarkedJobIds.includes(j._id));
+                return filtered.filter(i => bookmarkedIds.includes(i._id));
             case 'applied':
-                return filtered.filter(j => appliedJobIds.includes(j._id));
+                return filtered.filter(i => appliedInternshipIds.includes(i._id));
             case 'closed':
-                return filtered.filter(j => {
-                    if (j.deadline) return new Date(j.deadline) < new Date();
+                return filtered.filter(i => {
+                    if (i.status === 'closed') return true;
+                    if (i.deadline) return new Date(i.deadline) < new Date();
                     return false;
                 });
             case 'shortlisted':
-                return allAppliedJobs?.filter(app => app.status === 'shortlisted')
-                    .map(app => app.job).filter(Boolean) || [];
+                return appliedInternships
+                    ?.filter(app => app.status === 'shortlisted')
+                    .map(app => app.internship)
+                    .filter(Boolean) || [];
             case 'selected':
-                return allAppliedJobs?.filter(app => app.status === 'accepted')
-                    .map(app => app.job).filter(Boolean) || [];
+                return appliedInternships
+                    ?.filter(app => app.status === 'accepted')
+                    .map(app => app.internship)
+                    .filter(Boolean) || [];
             case 'open':
             default:
-                return filtered.filter(j => {
-                    if (j.deadline) return new Date(j.deadline) >= new Date();
+                return filtered.filter(i => {
+                    if (i.status === 'closed') return false;
+                    if (i.deadline) return new Date(i.deadline) >= new Date();
                     return true;
                 });
         }
     };
 
-    const filteredJobs = getFilteredJobs();
+    const filteredInternships = getFilteredInternships();
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Page Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Internships</h1>
@@ -100,7 +108,6 @@ const InternshipsPage = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* Search */}
                     <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border border-border w-64">
                         <Search size={16} className="text-muted-foreground" />
                         <input
@@ -117,7 +124,6 @@ const InternshipsPage = () => {
                         )}
                     </div>
 
-                    {/* Filter Toggle */}
                     <button
                         onClick={() => setShowFilters(!showFilters)}
                         className={`p-2.5 rounded-lg border transition-colors ${showFilters ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-card border-border text-muted-foreground hover:text-foreground'
@@ -128,7 +134,6 @@ const InternshipsPage = () => {
                 </div>
             </div>
 
-            {/* Filters Panel */}
             <AnimatePresence>
                 {showFilters && (
                     <motion.div
@@ -178,7 +183,6 @@ const InternshipsPage = () => {
                 )}
             </AnimatePresence>
 
-            {/* Tabs */}
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin pb-1">
                 {tabs.map(tab => (
                     <button
@@ -197,8 +201,7 @@ const InternshipsPage = () => {
                 ))}
             </div>
 
-            {/* Job Grid */}
-            {filteredJobs.length === 0 ? (
+            {filteredInternships.length === 0 ? (
                 <div className="text-center py-16">
                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
                         <Search size={24} className="text-muted-foreground" />
@@ -208,14 +211,14 @@ const InternshipsPage = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filteredJobs.map((job) => (
+                    {filteredInternships.map((internship) => (
                         <motion.div
-                            key={job._id}
+                            key={internship._id}
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <InternshipCard job={job} />
+                            <InternshipCard internship={internship} isApplied={appliedInternshipIds.includes(internship._id)} />
                         </motion.div>
                     ))}
                 </div>

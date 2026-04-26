@@ -6,10 +6,28 @@ import cloudinary from "../utils/cloudinary.js";
 
 export const register = async (req, res) => {
     try {
-        const { fullname, email, phoneNumber, password, role } = req.body;
+        const { fullname, email, phoneNumber, password, role, adminCode } = req.body;
 
         if (!fullname || !email || !phoneNumber || !password || !role) {
             return res.status(400).json({ message: "Something is missing", success: false });
+        }
+
+        const allowedRoles = ['student', 'admin'];
+        if (!allowedRoles.includes(role)) {
+            return res.status(400).json({
+                message: "Invalid role. Recruiter accounts are created by an administrator.",
+                success: false,
+            });
+        }
+
+        if (role === 'admin') {
+            const expected = process.env.ADMIN_SIGNUP_CODE;
+            if (!expected) {
+                return res.status(500).json({ message: "Admin signup is disabled (ADMIN_SIGNUP_CODE not set).", success: false });
+            }
+            if (!adminCode || adminCode !== expected) {
+                return res.status(403).json({ message: "Invalid admin signup code.", success: false });
+            }
         }
 
         const file = req.file;

@@ -29,7 +29,7 @@ const Navbar = () => {
     return (
         <div className="bg-card border-b border-border">
             <div className="flex items-center justify-between mx-auto max-w-7xl h-16 px-4">
-                <Link to={user?.role === 'recruiter' ? '/admin/companies' : '/dashboard'} className="flex items-center gap-2">
+                <Link to={(user?.role === 'recruiter' || user?.role === 'admin') ? '/admin/companies' : '/dashboard'} className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg gradient-border flex items-center justify-center">
                         <span className="text-white font-bold text-[10px]">JOH</span>
                     </div>
@@ -38,10 +38,11 @@ const Navbar = () => {
 
                 <div className="flex items-center gap-8">
                     <ul className="flex font-medium items-center gap-5">
-                        {user?.role === 'recruiter' ? (
+                        {(user?.role === 'recruiter' || user?.role === 'admin') ? (
                             <>
                                 <li><Link to="/admin/companies" className="text-muted-foreground hover:text-foreground transition-colors">Companies</Link></li>
                                 <li><Link to="/admin/jobs" className="text-muted-foreground hover:text-foreground transition-colors">Jobs</Link></li>
+                                <li><Link to="/admin/internships" className="text-muted-foreground hover:text-foreground transition-colors">Internships</Link></li>
                             </>
                         ) : (
                             <>

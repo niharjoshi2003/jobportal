@@ -58,7 +58,7 @@ const internshipSchema = new mongoose.Schema({
     },
     applications: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Application',
+        ref: 'InternshipApplication',
     }],
     tags: [{
         type: String

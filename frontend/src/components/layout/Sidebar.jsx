@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 const menuItems = [
     { path: '/dashboard', label: 'Home', icon: Home },
     { path: '/companies', label: 'Companies', icon: Building2 },
+    { path: '/jobs', label: 'Jobs', icon: Briefcase },
     { path: '/internships', label: 'Internships', icon: Briefcase },
     { path: '/interviews', label: 'Interview Invites', icon: CalendarCheck },
     { path: '/hackathons', label: 'Hackathons', icon: Trophy },

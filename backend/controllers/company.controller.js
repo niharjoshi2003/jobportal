@@ -72,29 +72,47 @@ export const getCompanyById = async (req, res) => {
 export const updateCompany = async (req, res) => {
     try {
         const { name, description, website, location } = req.body;
- 
+
+        // Build the update payload from text fields only; only attach `logo`
+        // when a new file is actually uploaded so we don't crash or wipe the
+        // existing logo on a text-only update.
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (description !== undefined) updateData.description = description;
+        if (website !== undefined) updateData.website = website;
+        if (location !== undefined) updateData.location = location;
+
         const file = req.file;
-        // idhar cloudinary ayega
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-        const logo = cloudResponse.secure_url;
-    
-        const updateData = { name, description, website, location, logo };
+        if (file) {
+            try {
+                const fileUri = getDataUri(file);
+                const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+                updateData.logo = cloudResponse.secure_url;
+            } catch (uploadErr) {
+                console.log("Cloudinary upload failed:", uploadErr.message);
+                return res.status(500).json({
+                    message: "Failed to upload logo.",
+                    success: false,
+                });
+            }
+        }
 
         const company = await Company.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
         if (!company) {
             return res.status(404).json({
                 message: "Company not found.",
-                success: false
-            })
+                success: false,
+            });
         }
         return res.status(200).json({
-            message:"Company information updated.",
-            success:true
-        })
+            message: "Company information updated.",
+            company,
+            success: true,
+        });
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ message: "Server error", success: false });
     }
-}
+};

@@ -13,7 +13,7 @@ import { Loader2 } from 'lucide-react';
 
 const Signup = () => {
     const [input, setInput] = useState({
-        fullname: "", email: "", phoneNumber: "", password: "", role: "", file: ""
+        fullname: "", email: "", phoneNumber: "", password: "", role: "", adminCode: "", file: ""
     });
     const { loading, user } = useSelector(store => store.auth);
     const dispatch = useDispatch();
@@ -35,6 +35,7 @@ const Signup = () => {
         formData.append("phoneNumber", input.phoneNumber);
         formData.append("password", input.password);
         formData.append("role", input.role);
+        if (input.role === 'admin' && input.adminCode) formData.append("adminCode", input.adminCode);
         if (input.file) formData.append("file", input.file);
 
         try {
@@ -97,8 +98,8 @@ const Signup = () => {
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div>
                                 <Label className="text-foreground text-sm mb-2 block">Role</Label>
-                                <RadioGroup className="flex items-center gap-6">
-                                    {['student', 'recruiter'].map(role => (
+                                <RadioGroup className="flex items-center gap-6 flex-wrap">
+                                    {['student', 'admin'].map(role => (
                                         <div key={role} className="flex items-center space-x-2">
                                             <Input type="radio" name="role" value={role}
                                                 checked={input.role === role} onChange={changeEventHandler}
@@ -107,6 +108,9 @@ const Signup = () => {
                                         </div>
                                     ))}
                                 </RadioGroup>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    Recruiter accounts are issued by an administrator after a company is registered.
+                                </p>
                             </div>
                             <div>
                                 <Label className="text-foreground text-sm">Profile Photo</Label>
@@ -114,6 +118,23 @@ const Signup = () => {
                                     className="mt-1 cursor-pointer bg-white/5 border-border text-foreground text-xs" />
                             </div>
                         </div>
+
+                        {input.role === 'admin' && (
+                            <div>
+                                <Label className="text-foreground text-sm">Admin Signup Code</Label>
+                                <Input
+                                    type="password"
+                                    name="adminCode"
+                                    value={input.adminCode}
+                                    onChange={changeEventHandler}
+                                    placeholder="Required to create an admin account"
+                                    className="mt-1 bg-white/5 border-border text-foreground"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Ask the site owner for the admin signup code.
+                                </p>
+                            </div>
+                        )}
 
                         {loading ? (
                             <Button className="w-full bg-primary" disabled>

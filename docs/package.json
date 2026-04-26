@@ -1,0 +1,12 @@
+{
+  "name": "jobportal-docs",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node generate-pdf.js"
+  },
+  "dependencies": {
+    "pdfkit": "^0.15.0"
+  }
+}

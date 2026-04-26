@@ -14,6 +14,7 @@ import internshipRoute from "./routes/internship.route.js";
 import interviewRoute from "./routes/interview.route.js";
 import testimonialRoute from "./routes/testimonial.route.js";
 import bookmarkRoute from "./routes/bookmark.route.js";
+import adminRoute from "./routes/admin.route.js";
 import { notFound, errorHandler } from "./middlewares/errorHandler.js";
 
 dotenv.config();
@@ -62,6 +63,7 @@ app.use("/api/v1/internship", internshipRoute);
 app.use("/api/v1/interview", interviewRoute);
 app.use("/api/v1/testimonial", testimonialRoute);
 app.use("/api/v1/bookmark", bookmarkRoute);
+app.use("/api/v1/admin", adminRoute);
 
 app.use(notFound);
 app.use(errorHandler);

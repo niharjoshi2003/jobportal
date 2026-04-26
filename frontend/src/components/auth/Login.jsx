@@ -43,7 +43,13 @@ const Login = () => {
             if (res.data?.success) {
                 dispatch(setUser(res.data.user));
                 toast.success(res.data.message || `Welcome back, ${res.data.user.fullname}`);
-                navigate(res.data.user.role === "recruiter" ? "/admin/companies" : "/dashboard");
+                const role = res.data.user.role;
+                const dest = role === "admin"
+                    ? "/admin/overview"
+                    : role === "recruiter"
+                        ? "/recruiter/applicants"
+                        : "/dashboard";
+                navigate(dest);
             } else {
                 toast.error(res.data?.message || "Login failed");
             }
@@ -78,17 +84,17 @@ const Login = () => {
                         <div>
                             <Label className="text-foreground text-sm">Email</Label>
                             <Input type="email" value={input.email} name="email" onChange={changeEventHandler}
-                                placeholder="student@jobohire.com" className="mt-1 bg-white/5 border-border text-foreground" />
+                                placeholder="you@example.com" className="mt-1 bg-white/5 border-border text-foreground" />
                         </div>
                         <div>
                             <Label className="text-foreground text-sm">Password</Label>
                             <Input type="password" value={input.password} name="password" onChange={changeEventHandler}
-                                placeholder="test1234" className="mt-1 bg-white/5 border-border text-foreground" />
+                                placeholder="Your password" className="mt-1 bg-white/5 border-border text-foreground" />
                         </div>
                         <div>
                             <Label className="text-foreground text-sm mb-2 block">Role</Label>
-                            <RadioGroup className="flex items-center gap-6">
-                                {['student', 'recruiter'].map(role => (
+                            <RadioGroup className="flex items-center gap-6 flex-wrap">
+                                {['student', 'recruiter', 'admin'].map(role => (
                                     <div key={role} className="flex items-center space-x-2">
                                         <Input type="radio" name="role" value={role}
                                             checked={input.role === role} onChange={changeEventHandler}
@@ -97,6 +103,9 @@ const Login = () => {
                                     </div>
                                 ))}
                             </RadioGroup>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Recruiters: use the credentials issued by your administrator.
+                            </p>
                         </div>
 
                         {loading ? (
@@ -112,25 +121,6 @@ const Login = () => {
                             <Link to="/signup" className="text-primary hover:underline">Signup</Link>
                         </p>
                     </form>
-                </div>
-
-                {/* Test credentials hint */}
-                <div className="mt-4 glass-card rounded-xl p-4">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Test Credentials</p>
-                    <div className="space-y-2 text-xs">
-                        <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
-                            <div>
-                                <span className="text-primary font-medium">Student:</span>
-                                <span className="text-muted-foreground ml-2">student@jobohire.com / test1234</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between p-2 rounded-lg bg-white/5">
-                            <div>
-                                <span className="text-primary font-medium">Recruiter:</span>
-                                <span className="text-muted-foreground ml-2">recruiter@jobohire.com / test1234</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
