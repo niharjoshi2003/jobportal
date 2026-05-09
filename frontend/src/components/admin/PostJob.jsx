@@ -1,17 +1,18 @@
-import React, { useState } from 'react'
-import Navbar from '../shared/Navbar'
-import { Label } from '../ui/label'
-import { Input } from '../ui/input'
-import { Button } from '../ui/button'
-import { useSelector } from 'react-redux'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
-import axios from 'axios'
-import { JOB_API_END_POINT } from '@/utils/constant'
-import { toast } from 'sonner'
-import { useNavigate } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
-
-const companyArray = [];
+import React, { useEffect, useState } from 'react';
+import Navbar from '../shared/Navbar';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+    Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue
+} from '../ui/select';
+import axios from 'axios';
+import { ADMIN_API_END_POINT, JOB_API_END_POINT } from '@/utils/constant';
+import { setCompanies } from '@/redux/companySlice';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 
 const PostJob = () => {
     const [input, setInput] = useState({
@@ -22,161 +23,191 @@ const PostJob = () => {
         location: "",
         jobType: "",
         experience: "",
-        position: 0,
-        companyId: ""
+        position: 1,
+        companyId: "",
+        companyName: "",
     });
-    const [loading, setLoading]= useState(false);
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     const { companies } = useSelector(store => store.company);
+
+    useEffect(() => {
+        // Admin needs ALL companies in the picker, not just companies the
+        // logged-in user owns (which is what /company/get returns).
+        const fetchAll = async () => {
+            try {
+                const res = await axios.get(`${ADMIN_API_END_POINT}/companies`, { withCredentials: true });
+                if (res.data?.success) dispatch(setCompanies(res.data.companies));
+            } catch (e) {
+                // Silently fall back to whatever's already in the store.
+            }
+        };
+        fetchAll();
+    }, [dispatch]);
+
     const changeEventHandler = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value });
     };
 
-    const selectChangeHandler = (value) => {
-        const selectedCompany = companies.find((company)=> company.name.toLowerCase() === value);
-        setInput({...input, companyId:selectedCompany._id});
+    const selectChangeHandler = (companyId) => {
+        const selectedCompany = companies.find(c => c._id === companyId);
+        setInput({
+            ...input,
+            companyId,
+            companyName: selectedCompany?.name || "",
+        });
     };
 
     const submitHandler = async (e) => {
         e.preventDefault();
+        if (!input.title || !input.description || !input.requirements ||
+            input.salary === "" || !input.location || !input.jobType ||
+            input.experience === "" || !input.companyId) {
+            toast.error('Please fill in all required fields.');
+            return;
+        }
+        if (Number(input.position) <= 0) {
+            toast.error('Number of openings must be greater than 0.');
+            return;
+        }
+
+        const payload = {
+            title: input.title,
+            description: input.description,
+            requirements: input.requirements,
+            salary: input.salary,
+            location: input.location,
+            jobType: input.jobType,
+            experience: input.experience,
+            position: input.position,
+            companyId: input.companyId,
+        };
+
         try {
             setLoading(true);
-            const res = await axios.post(`${JOB_API_END_POINT}/post`, input,{
-                headers:{
-                    'Content-Type':'application/json'
-                },
-                withCredentials:true
+            const res = await axios.post(`${JOB_API_END_POINT}/post`, payload, {
+                headers: { 'Content-Type': 'application/json' },
+                withCredentials: true,
             });
-            if(res.data.success){
+            if (res.data.success) {
                 toast.success(res.data.message);
-                navigate("/admin/jobs");
+                navigate("/admin/all-jobs");
             }
         } catch (error) {
-            toast.error(error.response.data.message);
-        } finally{
+            toast.error(error.response?.data?.message || 'Failed to post job.');
+        } finally {
             setLoading(false);
         }
-    }
+    };
+
+    const hasCompanies = (companies?.length || 0) > 0;
 
     return (
         <div>
             <Navbar />
-            <div className='flex items-center justify-center w-screen my-5'>
-                <form onSubmit = {submitHandler} className='p-8 max-w-4xl border border-gray-200 shadow-lg rounded-md'>
-                    <div className='grid grid-cols-2 gap-2'>
-                        <div>
-                            <Label>Title</Label>
-                            <Input
-                                type="text"
-                                name="title"
-                                value={input.title}
-                                onChange={changeEventHandler}
-                                className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                            />
-                        </div>
-                        <div>
-                            <Label>Description</Label>
-                            <Input
-                                type="text"
-                                name="description"
-                                value={input.description}
-                                onChange={changeEventHandler}
-                                className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                            />
-                        </div>
-                        <div>
-                            <Label>Requirements</Label>
-                            <Input
-                                type="text"
-                                name="requirements"
-                                value={input.requirements}
-                                onChange={changeEventHandler}
-                                className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                            />
-                        </div>
-                        <div>
-                            <Label>Salary</Label>
-                            <Input
-                                type="text"
-                                name="salary"
-                                value={input.salary}
-                                onChange={changeEventHandler}
-                                className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                            />
-                        </div>
-                        <div>
-                            <Label>Location</Label>
-                            <Input
-                                type="text"
-                                name="location"
-                                value={input.location}
-                                onChange={changeEventHandler}
-                                className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                            />
-                        </div>
-                        <div>
-                            <Label>Job Type</Label>
-                            <Input
-                                type="text"
-                                name="jobType"
-                                value={input.jobType}
-                                onChange={changeEventHandler}
-                                className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                            />
-                        </div>
-                        <div>
-                            <Label>Experience Level</Label>
-                            <Input
-                                type="text"
-                                name="experience"
-                                value={input.experience}
-                                onChange={changeEventHandler}
-                                className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                            />
-                        </div>
-                        <div>
-                            <Label>No of Postion</Label>
-                            <Input
-                                type="number"
-                                name="position"
-                                value={input.position}
-                                onChange={changeEventHandler}
-                                className="focus-visible:ring-offset-0 focus-visible:ring-0 my-1"
-                            />
-                        </div>
-                        {
-                            companies.length > 0 && (
-                                <Select onValueChange={selectChangeHandler}>
-                                    <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Select a Company" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectGroup>
-                                            {
-                                                companies.map((company) => {
-                                                    return (
-                                                        <SelectItem value={company?.name?.toLowerCase()}>{company.name}</SelectItem>
-                                                    )
-                                                })
-                                            }
+            <div className="max-w-4xl mx-auto px-4 my-8">
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-foreground">Post a New Job</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Create a job opening for one of the registered companies. All approved students will be notified.
+                    </p>
+                </div>
 
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                            )
-                        }
-                    </div> 
-                    {
-                        loading ? <Button className="w-full my-4"> <Loader2 className='mr-2 h-4 w-4 animate-spin' /> Please wait </Button> : <Button type="submit" className="w-full my-4">Post New Job</Button>
-                    }
-                    {
-                        companies.length === 0 && <p className='text-xs text-red-600 font-bold text-center my-3'>*Please register a company first, before posting a jobs</p>
-                    }
+                <form onSubmit={submitHandler} className="space-y-6">
+                    <section className="glass-card rounded-2xl p-6 space-y-4">
+                        <h2 className="font-semibold text-foreground">Job Details</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <Label>Title *</Label>
+                                <Input name="title" value={input.title} onChange={changeEventHandler}
+                                    placeholder="e.g. Backend Engineer" />
+                            </div>
+                            <div>
+                                <Label>Job Type *</Label>
+                                <Input name="jobType" value={input.jobType} onChange={changeEventHandler}
+                                    placeholder="Full Time / Part Time / Contract" />
+                            </div>
+                            <div className="md:col-span-2">
+                                <Label>Description *</Label>
+                                <textarea
+                                    name="description"
+                                    value={input.description}
+                                    onChange={changeEventHandler}
+                                    rows={3}
+                                    className="mt-1 w-full rounded-md border border-border bg-white/5 px-3 py-2 text-sm text-foreground"
+                                    placeholder="Describe the role, responsibilities, etc."
+                                />
+                            </div>
+                            <div className="md:col-span-2">
+                                <Label>Requirements * (comma separated)</Label>
+                                <Input name="requirements" value={input.requirements} onChange={changeEventHandler}
+                                    placeholder="React, Node.js, MongoDB" />
+                            </div>
+                            <div>
+                                <Label>Salary (LPA) *</Label>
+                                <Input type="number" name="salary" value={input.salary}
+                                    onChange={changeEventHandler} placeholder="12" min="0" />
+                            </div>
+                            <div>
+                                <Label>Location *</Label>
+                                <Input name="location" value={input.location} onChange={changeEventHandler}
+                                    placeholder="Tokyo, Japan" />
+                            </div>
+                            <div>
+                                <Label>Experience (years) *</Label>
+                                <Input type="number" name="experience" value={input.experience}
+                                    onChange={changeEventHandler} placeholder="0" min="0" />
+                            </div>
+                            <div>
+                                <Label>No. of Openings *</Label>
+                                <Input type="number" name="position" value={input.position}
+                                    onChange={changeEventHandler} min="1" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="glass-card rounded-2xl p-6 space-y-4">
+                        <h2 className="font-semibold text-foreground">Company *</h2>
+                        {hasCompanies ? (
+                            <Select value={input.companyId || undefined} onValueChange={selectChangeHandler}>
+                                <SelectTrigger className="w-full md:w-[320px]">
+                                    <SelectValue placeholder="Select a company" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        {companies.map(company => (
+                                            <SelectItem key={company._id} value={company._id}>
+                                                {company.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <p className="text-xs text-red-400">
+                                No companies registered yet. Please register a company first before posting jobs.
+                            </p>
+                        )}
+                    </section>
+
+                    <div className="flex items-center gap-3">
+                        <Button type="button" variant="outline" onClick={() => navigate('/admin/all-jobs')}>
+                            Cancel
+                        </Button>
+                        {loading ? (
+                            <Button disabled>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Posting...
+                            </Button>
+                        ) : (
+                            <Button type="submit" disabled={!hasCompanies}>Post Job</Button>
+                        )}
+                    </div>
                 </form>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default PostJob
+export default PostJob;

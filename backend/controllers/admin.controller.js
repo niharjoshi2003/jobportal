@@ -19,6 +19,7 @@ export const getStats = async (req, res) => {
     try {
         const [
             totalUsers, totalStudents, totalRecruiters, totalAdmins,
+            pendingStudents,
             totalCompanies, verifiedCompanies,
             totalJobs, totalInternships,
             totalJobApplications, totalInternshipApplications,
@@ -27,6 +28,7 @@ export const getStats = async (req, res) => {
             User.countDocuments({ role: 'student' }),
             User.countDocuments({ role: 'recruiter' }),
             User.countDocuments({ role: 'admin' }),
+            User.countDocuments({ role: 'student', status: 'pending' }),
             Company.countDocuments(),
             Company.countDocuments({ verified: true }),
             Job.countDocuments(),
@@ -44,7 +46,7 @@ export const getStats = async (req, res) => {
 
         return res.status(200).json({
             stats: {
-                users: { total: totalUsers, students: totalStudents, recruiters: totalRecruiters, admins: totalAdmins },
+                users: { total: totalUsers, students: totalStudents, recruiters: totalRecruiters, admins: totalAdmins, pendingStudents },
                 companies: { total: totalCompanies, verified: verifiedCompanies, pending: totalCompanies - verifiedCompanies },
                 jobs: { total: totalJobs },
                 internships: { total: totalInternships },
@@ -62,17 +64,63 @@ export const getStats = async (req, res) => {
 // ============ USERS ============
 export const listUsers = async (req, res) => {
     try {
-        const { role, q } = req.query;
+        const { role, q, status } = req.query;
         const filter = {};
         if (role && ['student', 'recruiter', 'admin'].includes(role)) filter.role = role;
+        if (status && ['pending', 'approved', 'rejected'].includes(status)) filter.status = status;
         if (q) {
             filter.$or = [
                 { fullname: { $regex: q, $options: "i" } },
                 { email: { $regex: q, $options: "i" } },
+                { college: { $regex: q, $options: "i" } },
+                { rollNumber: { $regex: q, $options: "i" } },
             ];
         }
         const users = await User.find(filter).select("-password").sort({ createdAt: -1 });
         return res.status(200).json({ users, success: true });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
+export const approveStudent = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found.", success: false });
+        if (user.role !== 'student') {
+            return res.status(400).json({ message: "Only student accounts require approval.", success: false });
+        }
+        user.status = 'approved';
+        user.approvedBy = req.user._id;
+        user.approvedAt = new Date();
+        user.rejectionReason = "";
+        await user.save();
+        const safe = user.toObject();
+        delete safe.password;
+        return res.status(200).json({ message: "Student approved.", user: safe, success: true });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
+export const rejectStudent = async (req, res) => {
+    try {
+        const { reason } = req.body || {};
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found.", success: false });
+        if (user.role !== 'student') {
+            return res.status(400).json({ message: "Only student accounts can be rejected here.", success: false });
+        }
+        user.status = 'rejected';
+        user.rejectionReason = reason ? String(reason).trim() : "";
+        user.approvedBy = req.user._id;
+        user.approvedAt = new Date();
+        await user.save();
+        const safe = user.toObject();
+        delete safe.password;
+        return res.status(200).json({ message: "Student rejected.", user: safe, success: true });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Server error", success: false });

@@ -61,7 +61,7 @@ const CompanyCreate = () => {
 
     const copyToClipboard = async () => {
         if (!credentials) return;
-        const text = `Email: ${credentials.email}\nPassword: ${credentials.password}`;
+        const text = `Email: ${credentials.email}\nPassword: ${credentials.password}\nLogin: ${window.location.origin}/portal-login`;
         try {
             await navigator.clipboard.writeText(text);
             toast.success('Credentials copied to clipboard.');
@@ -190,7 +190,11 @@ const CompanyCreate = () => {
                         <div className="mt-4 p-4 rounded-lg bg-white/5 border border-border space-y-2 font-mono text-sm">
                             <div><span className="text-muted-foreground">Email: </span><span className="text-foreground">{credentials.email}</span></div>
                             <div><span className="text-muted-foreground">Password: </span><span className="text-primary">{credentials.password}</span></div>
+                            <div><span className="text-muted-foreground">Login: </span><span className="text-foreground text-xs">{window.location.origin}/portal-login</span></div>
                         </div>
+                        <p className="text-xs text-muted-foreground mt-3">
+                            Forgot to copy? You can generate a new password anytime from the Companies page.
+                        </p>
                         <div className="flex gap-2 mt-5">
                             <Button onClick={copyToClipboard} className="flex-1">Copy</Button>
                             <Button

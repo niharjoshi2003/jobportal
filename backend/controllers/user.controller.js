@@ -6,7 +6,7 @@ import cloudinary from "../utils/cloudinary.js";
 
 export const register = async (req, res) => {
     try {
-        const { fullname, email, phoneNumber, password, role, adminCode } = req.body;
+        const { fullname, email, phoneNumber, password, role, adminCode, college, rollNumber } = req.body;
 
         if (!fullname || !email || !phoneNumber || !password || !role) {
             return res.status(400).json({ message: "Something is missing", success: false });
@@ -18,6 +18,29 @@ export const register = async (req, res) => {
                 message: "Invalid role. Recruiter accounts are created by an administrator.",
                 success: false,
             });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(String(email).trim())) {
+            return res.status(400).json({ message: "Please enter a valid email address.", success: false });
+        }
+
+        const phoneStr = String(phoneNumber).replace(/\D/g, "");
+        if (!/^\d{10}$/.test(phoneStr)) {
+            return res.status(400).json({ message: "Phone number must be exactly 10 digits.", success: false });
+        }
+
+        if (String(password).length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters long.", success: false });
+        }
+
+        if (role === 'student') {
+            if (!college || !String(college).trim()) {
+                return res.status(400).json({ message: "College name is required for student signup.", success: false });
+            }
+            if (!rollNumber || !String(rollNumber).trim()) {
+                return res.status(400).json({ message: "Roll number is required for student signup.", success: false });
+            }
         }
 
         if (role === 'admin') {
@@ -48,15 +71,22 @@ export const register = async (req, res) => {
         await User.create({
             fullname,
             email,
-            phoneNumber,
+            phoneNumber: Number(phoneStr),
             password: hashedPassword,
             role,
+            college: role === 'student' ? String(college).trim() : "",
+            rollNumber: role === 'student' ? String(rollNumber).trim() : "",
+            status: role === 'student' ? 'pending' : 'approved',
             profile: {
                 profilePhoto: profilePhotoUrl,
             }
         });
 
-        return res.status(201).json({ message: "Account created successfully.", success: true });
+        const successMessage = role === 'student'
+            ? "Account created. Awaiting admin approval before you can log in."
+            : "Account created successfully.";
+
+        return res.status(201).json({ message: successMessage, success: true });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Server error", success: false });
@@ -85,6 +115,22 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: "Account doesn't exist with current role.", success: false });
         }
 
+        if (user.role === 'student' && user.status && user.status !== 'approved') {
+            if (user.status === 'pending') {
+                return res.status(403).json({
+                    message: "Your account is awaiting admin approval. Please check back later.",
+                    success: false,
+                });
+            }
+            if (user.status === 'rejected') {
+                const reason = user.rejectionReason ? ` Reason: ${user.rejectionReason}` : "";
+                return res.status(403).json({
+                    message: `Your account registration was rejected.${reason}`,
+                    success: false,
+                });
+            }
+        }
+
         if (!process.env.SECRET_KEY) {
             return res.status(500).json({ message: "Server misconfigured: SECRET_KEY missing.", success: false });
         }
@@ -103,10 +149,13 @@ export const login = async (req, res) => {
             role: user.role,
             gender: user.gender,
             college: user.college,
+            rollNumber: user.rollNumber,
+            status: user.status,
             personalEmail: user.personalEmail,
             graduationYear: user.graduationYear,
             profile: user.profile,
             bookmarkedJobs: user.bookmarkedJobs,
+            notifications: user.notifications,
         };
 
         const isProd = process.env.NODE_ENV === "production";

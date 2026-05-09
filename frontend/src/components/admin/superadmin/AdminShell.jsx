@@ -1,15 +1,17 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { LayoutDashboard, Users, Building2, Briefcase, GraduationCap, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Briefcase, GraduationCap, LogOut, ShieldCheck, UserCheck } from 'lucide-react';
 import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
+import logo from '@/assets/logo.png';
 
 const navItems = [
     { path: '/admin/overview', label: 'Overview', icon: LayoutDashboard },
     { path: '/admin/users', label: 'Users', icon: Users },
+    { path: '/admin/pending-students', label: 'Pending Approvals', icon: UserCheck },
     { path: '/admin/all-companies', label: 'Companies', icon: Building2 },
     { path: '/admin/all-jobs', label: 'Jobs', icon: Briefcase },
     { path: '/admin/all-internships', label: 'Internships', icon: GraduationCap },
@@ -24,7 +26,7 @@ const AdminShell = ({ children, title, subtitle }) => {
     const logout = async () => {
         try { await axios.get(`${USER_API_END_POINT}/logout`, { withCredentials: true }); } catch (e) { /* ignore */ }
         dispatch(setUser(null));
-        navigate('/login');
+        navigate('/portal-login');
         toast.success('Logged out');
     };
 
@@ -33,13 +35,8 @@ const AdminShell = ({ children, title, subtitle }) => {
             <aside className="w-64 bg-[hsl(222,47%,8%)] border-r border-white/10 flex flex-col">
                 <div className="px-5 py-5 border-b border-white/10">
                     <Link to="/admin/overview" className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                            <ShieldCheck size={16} className="text-white" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-bold text-white tracking-tight">Job-O-Hire</p>
-                            <p className="text-[10px] text-purple-300 uppercase tracking-wider">Admin Console</p>
-                        </div>
+                        <img src={logo} alt="Job-O-Hire" className="h-8 w-auto" />
+                        <span className="text-[10px] text-purple-300 uppercase tracking-wider font-semibold ml-1">Admin</span>
                     </Link>
                 </div>
 
