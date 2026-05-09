@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Login from './components/auth/Login';
+import StaffLogin from './components/auth/StaffLogin';
 import Signup from './components/auth/Signup';
 import LandingPage from './components/LandingPage';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -26,6 +27,8 @@ import ProtectedRoute from './components/admin/ProtectedRoute';
 import RecruiterApplicants from './components/recruiter/RecruiterApplicants';
 import AdminOverview from './components/admin/superadmin/AdminOverview';
 import AdminUsers from './components/admin/superadmin/AdminUsers';
+import AdminPendingStudents from './components/admin/superadmin/AdminPendingStudents';
+import LegalPage from './components/legal/LegalPage';
 import AdminAllCompanies from './components/admin/superadmin/AdminAllCompanies';
 import AdminAllJobs from './components/admin/superadmin/AdminAllJobs';
 import AdminAllInternships from './components/admin/superadmin/AdminAllInternships';
@@ -40,8 +43,16 @@ const appRouter = createBrowserRouter([
         element: <Login />
     },
     {
+        path: '/portal-login',
+        element: <StaffLogin />
+    },
+    {
         path: '/signup',
         element: <Signup />
+    },
+    {
+        path: '/privacy',
+        element: <LegalPage />
     },
     {
         element: <DashboardLayout />,
@@ -111,6 +122,10 @@ const appRouter = createBrowserRouter([
     {
         path: '/admin/users',
         element: <ProtectedRoute roles={['admin']}><AdminUsers /></ProtectedRoute>
+    },
+    {
+        path: '/admin/pending-students',
+        element: <ProtectedRoute roles={['admin']}><AdminPendingStudents /></ProtectedRoute>
     },
     {
         path: '/admin/all-companies',

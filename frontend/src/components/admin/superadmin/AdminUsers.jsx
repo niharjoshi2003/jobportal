@@ -22,6 +22,7 @@ const AdminUsers = () => {
     const [loading, setLoading] = useState(true);
     const [q, setQ] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
 
     const fetchUsers = async () => {
         try {
@@ -29,6 +30,7 @@ const AdminUsers = () => {
             const params = new URLSearchParams();
             if (q) params.set('q', q);
             if (roleFilter) params.set('role', roleFilter);
+            if (statusFilter) params.set('status', statusFilter);
             const res = await axios.get(`${ADMIN_API_END_POINT}/users?${params}`, { withCredentials: true });
             if (res.data.success) setUsers(res.data.users);
         } catch (e) {
@@ -38,7 +40,7 @@ const AdminUsers = () => {
         }
     };
 
-    useEffect(() => { fetchUsers(); /* eslint-disable-next-line */ }, [roleFilter]);
+    useEffect(() => { fetchUsers(); /* eslint-disable-next-line */ }, [roleFilter, statusFilter]);
 
     const onSearchSubmit = (e) => { e.preventDefault(); fetchUsers(); };
 
@@ -87,6 +89,16 @@ const AdminUsers = () => {
                 >
                     <option value="">All roles</option>
                     {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 rounded-lg bg-card border border-border text-foreground text-sm"
+                >
+                    <option value="">All statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
                 </select>
                 <span className="text-sm text-muted-foreground">{users.length} users</span>
             </div>

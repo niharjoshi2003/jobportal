@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Trash2, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Search, Trash2, ShieldCheck, ShieldOff, KeyRound, Copy } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Avatar, AvatarImage } from '../../ui/avatar';
+import { Button } from '../../ui/button';
 
 const AdminAllCompanies = () => {
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [q, setQ] = useState('');
     const [verified, setVerified] = useState('');
+    const [credentials, setCredentials] = useState(null); // { companyName, email, password }
+    const [resettingId, setResettingId] = useState(null);
 
     const fetchCompanies = async () => {
         try {
@@ -42,6 +45,46 @@ const AdminAllCompanies = () => {
         }
     };
 
+    const resetRecruiterPassword = async (id, name) => {
+        if (!window.confirm(
+            `Reset the recruiter password for "${name}"?\n\nThe old password will stop working immediately. ` +
+            `A new one will be generated and shown once \u2014 share it with the recruiter through a secure channel.`
+        )) return;
+        try {
+            setResettingId(id);
+            const res = await axios.post(
+                `${ADMIN_API_END_POINT}/companies/${id}/reset-recruiter-password`,
+                {},
+                { withCredentials: true }
+            );
+            if (res.data?.success) {
+                toast.success('Recruiter password reset.');
+                setCredentials({
+                    companyName: name,
+                    email: res.data.credentials.email,
+                    password: res.data.credentials.password,
+                });
+            } else {
+                toast.error(res.data?.message || 'Failed to reset password.');
+            }
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Failed to reset password.');
+        } finally {
+            setResettingId(null);
+        }
+    };
+
+    const copyCredentials = async () => {
+        if (!credentials) return;
+        const text = `Company: ${credentials.companyName}\nEmail: ${credentials.email}\nPassword: ${credentials.password}\nLogin: ${window.location.origin}/portal-login`;
+        try {
+            await navigator.clipboard.writeText(text);
+            toast.success('Credentials copied to clipboard.');
+        } catch {
+            toast.error('Could not copy. Please select and copy manually.');
+        }
+    };
+
     const deleteCompany = async (id, name) => {
         if (!window.confirm(`Delete company "${name}"? All its jobs, internships, and applications will be removed too.`)) return;
         try {
@@ -57,6 +100,13 @@ const AdminAllCompanies = () => {
 
     return (
         <AdminShell title="Companies" subtitle="Approve, manage, and remove company accounts">
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 mb-4 text-xs text-muted-foreground">
+                <span className="text-blue-300 font-medium">Recruiter credentials:</span>{' '}
+                The recruiter's login email is shown next to each company. Passwords are stored
+                hashed and cannot be viewed again after creation, but you can issue a new one anytime
+                by clicking <span className="text-foreground font-medium">Reset Password</span>.
+            </div>
+
             <div className="flex items-center gap-3 mb-4 flex-wrap">
                 <form onSubmit={(e) => { e.preventDefault(); fetchCompanies(); }} className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border border-border w-72">
                     <Search size={16} className="text-muted-foreground" />
@@ -84,7 +134,7 @@ const AdminAllCompanies = () => {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Company</TableHead>
-                            <TableHead>Owner</TableHead>
+                            <TableHead>Recruiter</TableHead>
                             <TableHead>Location</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Created</TableHead>
@@ -110,9 +160,23 @@ const AdminAllCompanies = () => {
                                         <span className="font-medium">{c.name}</span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-muted-foreground text-sm">
-                                    {c.userId?.fullname || '-'}<br />
-                                    <span className="text-xs">{c.userId?.email}</span>
+                                <TableCell className="text-sm">
+                                    <div className="text-foreground">{c.userId?.fullname || '-'}</div>
+                                    {c.userId?.email && (
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <span className="text-xs text-muted-foreground font-mono">{c.userId.email}</span>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(c.userId.email);
+                                                    toast.success('Email copied');
+                                                }}
+                                                className="p-0.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                                                title="Copy recruiter email"
+                                            >
+                                                <Copy size={11} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">{c.location || '-'}</TableCell>
                                 <TableCell>
@@ -126,7 +190,16 @@ const AdminAllCompanies = () => {
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">{c.createdAt?.split('T')[0]}</TableCell>
                                 <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
+                                    <div className="flex items-center justify-end gap-2 flex-wrap">
+                                        <button
+                                            onClick={() => resetRecruiterPassword(c._id, c.name)}
+                                            disabled={resettingId === c._id || !c.userId}
+                                            className="px-2 py-1 rounded-md text-xs bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 inline-flex items-center gap-1 disabled:opacity-50"
+                                            title="Generate a new recruiter password"
+                                        >
+                                            <KeyRound size={12} />
+                                            {resettingId === c._id ? 'Resetting...' : 'Reset Password'}
+                                        </button>
                                         {c.verified ? (
                                             <button
                                                 onClick={() => toggleVerify(c._id, false)}
@@ -156,6 +229,30 @@ const AdminAllCompanies = () => {
                     </TableBody>
                 </Table>
             </div>
+
+            {credentials && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+                    <div className="bg-background border border-border rounded-2xl p-6 max-w-md w-full">
+                        <h3 className="text-lg font-bold text-foreground">New Recruiter Credentials</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            New password for <strong className="text-foreground">{credentials.companyName}</strong>.
+                            Copy and share these credentials with the recruiter through a secure channel.
+                            <span className="text-amber-300"> The password will not be shown again.</span>
+                        </p>
+                        <div className="mt-4 p-4 rounded-lg bg-white/5 border border-border space-y-2 font-mono text-sm">
+                            <div><span className="text-muted-foreground">Email: </span><span className="text-foreground">{credentials.email}</span></div>
+                            <div><span className="text-muted-foreground">Password: </span><span className="text-primary">{credentials.password}</span></div>
+                            <div><span className="text-muted-foreground">Login: </span><span className="text-foreground text-xs">{window.location.origin}/portal-login</span></div>
+                        </div>
+                        <div className="flex gap-2 mt-5">
+                            <Button onClick={copyCredentials} className="flex-1">Copy</Button>
+                            <Button variant="outline" className="flex-1" onClick={() => setCredentials(null)}>
+                                Done
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminShell>
     );
 };

@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import {
     ArrowRight, Building2, Globe, Users, CheckCircle, Shield,
     GraduationCap, Target, Zap, Star, ChevronDown, TrendingUp, Award,
-    Sparkles, ArrowUpRight, MapPin, Heart, Linkedin, Send, Phone,
+    Sparkles, ArrowUpRight, MapPin, Heart, Linkedin, Send,
     Twitter, Mail, ChevronRight, Play, Menu, X, MessageSquare
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
+import logo from '@/assets/logo.png';
 
 const fadeUp = {
     hidden: { opacity: 0, y: 40 },
@@ -66,92 +67,16 @@ const SectionLabel = ({ icon: Icon, text, color = 'primary' }) => {
     );
 };
 
-/* ─────────────────────────────────────────────
-   BrandLogo
-   Mark: a bridge arch (two pillars + arch + O keystone)
-         representing the India → O → Japan talent bridge
-   Wordmark: Job (light) · O (gradient) · Hire (bold)
-             weight contrast tells the brand story:
-             opportunity → connection → placement
-───────────────────────────────────────────── */
 const BrandLogo = ({ size = 'md' }) => {
-    const cfg = {
-        sm: { box: 32, svg: 18, fSize: 14, oSize: 12 },
-        md: { box: 38, svg: 22, fSize: 17, oSize: 15 },
-        lg: { box: 44, svg: 26, fSize: 20, oSize: 17 },
-    }[size] || { box: 38, svg: 22, fSize: 17, oSize: 15 };
-
+    const height = { sm: 28, md: 36, lg: 44 }[size] || 36;
     return (
-        <div className="flex items-center gap-3 group select-none">
-            {/* ── Logomark ── */}
-            <div
-                className="logo-breathe flex items-center justify-center flex-shrink-0 group-hover:scale-[1.07] group-hover:shadow-[0_6px_28px_hsl(243_100%_68%/0.55)] transition-all duration-300"
-                style={{
-                    width: cfg.box,
-                    height: cfg.box,
-                    borderRadius: Math.round(cfg.box * 0.27),
-                    background: 'linear-gradient(145deg, hsl(243 100% 70%) 0%, hsl(265 85% 58%) 55%, hsl(280 80% 52%) 100%)',
-                    boxShadow: '0 2px 12px hsl(243 100% 68% / 0.32), inset 0 1px 0 rgba(255,255,255,0.15)',
-                }}
-            >
-                <svg width={cfg.svg} height={cfg.svg} viewBox="0 0 24 24" fill="none">
-                    {/* Subtle inner shine */}
-                    <ellipse cx="12" cy="4" rx="9" ry="3.5" fill="white" fillOpacity="0.07" />
-                    {/* Left pillar */}
-                    <rect x="1.5" y="13" width="4.5" height="10" rx="2.25" fill="white" fillOpacity="0.93" />
-                    {/* Right pillar */}
-                    <rect x="18" y="13" width="4.5" height="10" rx="2.25" fill="white" fillOpacity="0.93" />
-                    {/* Bridge arch — the main structural element */}
-                    <path
-                        d="M3.75 14.5 Q12 1 20.25 14.5"
-                        stroke="white"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        fill="none"
-                    />
-                    {/* Keystone circle — the "O", the connector, the bridge's crown */}
-                    <circle cx="12" cy="5" r="2.8" fill="white" fillOpacity="0.28" />
-                    <circle cx="12" cy="5" r="1.6" fill="white" fillOpacity="0.65" />
-                </svg>
-            </div>
-
-            {/* ── Wordmark ── */}
-            <div className="flex items-baseline leading-none">
-                {/* "Job" — light, airy — the opportunity */}
-                <span style={{
-                    fontSize: cfg.fSize,
-                    fontWeight: 300,
-                    letterSpacing: '0.06em',
-                    color: 'hsl(210 30% 84%)',
-                    fontFamily: 'inherit',
-                }}>
-                    Job
-                </span>
-                {/* "O" — gradient, strong — the bridge/connection */}
-                <span style={{
-                    fontSize: cfg.oSize,
-                    fontWeight: 900,
-                    margin: '0 2px',
-                    background: 'linear-gradient(135deg, hsl(243 100% 82%), hsl(280 80% 73%))',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    lineHeight: 1,
-                    display: 'inline-block',
-                }}>
-                    O
-                </span>
-                {/* "Hire" — bold, bright — the outcome */}
-                <span style={{
-                    fontSize: cfg.fSize,
-                    fontWeight: 700,
-                    letterSpacing: '-0.02em',
-                    color: 'hsl(210 40% 98%)',
-                    fontFamily: 'inherit',
-                }}>
-                    Hire
-                </span>
-            </div>
+        <div className="flex items-center group select-none">
+            <img
+                src={logo}
+                alt="Job-O-Hire"
+                style={{ height, width: 'auto' }}
+                className="transition-transform duration-300 group-hover:scale-[1.04] drop-shadow-[0_4px_18px_rgba(255,255,255,0.08)]"
+            />
         </div>
     );
 };
@@ -251,6 +176,9 @@ const LandingPage = () => {
                             </Link>
                         ) : (
                             <>
+                                <Link to="/portal-login" className="hidden md:block px-3 py-2 text-muted-foreground rounded-lg text-xs font-medium hover:text-foreground hover:bg-white/5 transition-colors">
+                                    Recruiter / Admin
+                                </Link>
                                 <Link to="/login" className="hidden sm:block px-4 py-2 text-foreground rounded-lg text-sm font-medium hover:bg-white/5 transition-colors">
                                     {t('nav.login')}
                                 </Link>
@@ -277,6 +205,12 @@ const LandingPage = () => {
                                         {link.label}
                                     </a>
                                 ))}
+                                {!user && (
+                                    <Link to="/portal-login" onClick={() => setMobileMenu(false)}
+                                        className="block px-4 py-3 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-all">
+                                        Recruiter / Admin login
+                                    </Link>
+                                )}
                                 <div className="pt-2 px-4">
                                     <LanguageSwitcher lang={lang} onToggle={handleLangToggle} />
                                 </div>
@@ -842,16 +776,6 @@ const LandingPage = () => {
                                         <p className="text-sm text-foreground font-medium group-hover/link:text-primary transition-colors">{t('contact.email_value')}</p>
                                     </div>
                                 </a>
-                                <a href={`tel:${t('contact.phone_value')}`}
-                                    className="flex items-center gap-3 group/link">
-                                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover/link:bg-primary/20 transition-colors">
-                                        <Phone size={15} className="text-primary" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{t('contact.phone_label')}</p>
-                                        <p className="text-sm text-foreground font-medium group-hover/link:text-primary transition-colors">{t('contact.phone_value')}</p>
-                                    </div>
-                                </a>
                             </motion.div>
                         </motion.div>
 
@@ -1027,7 +951,7 @@ const LandingPage = () => {
                             <ul className="space-y-3">
                                 {t('footer.legal_links', { returnObjects: true }).map(item => (
                                     <li key={item}>
-                                        <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{item}</a>
+                                        <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{item}</Link>
                                     </li>
                                 ))}
                             </ul>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { RadioGroup } from '../ui/radio-group';
@@ -10,31 +10,73 @@ import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
 import { setLoading } from '@/redux/authSlice';
 import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import PrivacyContent from '../legal/PrivacyContent';
+import logo from '@/assets/logo.png';
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneRegex = /^\d{10}$/;
 
 const Signup = () => {
     const [input, setInput] = useState({
-        fullname: "", email: "", phoneNumber: "", password: "", role: "", adminCode: "", file: ""
+        fullname: "", email: "", phoneNumber: "", password: "",
+        role: "", adminCode: "", college: "", rollNumber: "", file: ""
     });
+    const [errors, setErrors] = useState({});
+    const [agreed, setAgreed] = useState(false);
+    const [legalOpen, setLegalOpen] = useState(false);
     const { loading, user } = useSelector(store => store.auth);
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
     const changeEventHandler = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value });
+        if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
     };
 
     const changeFileHandler = (e) => {
         setInput({ ...input, file: e.target.files?.[0] });
     };
 
+    const validate = () => {
+        const next = {};
+        if (!input.fullname.trim()) next.fullname = 'Full name is required.';
+        if (!emailRegex.test(input.email.trim())) next.email = 'Please enter a valid email address.';
+        if (!phoneRegex.test(String(input.phoneNumber).replace(/\D/g, ''))) {
+            next.phoneNumber = 'Phone number must be exactly 10 digits.';
+        }
+        if (!input.password || input.password.length < 6) {
+            next.password = 'Password must be at least 6 characters.';
+        }
+        if (!input.role) next.role = 'Please select a role.';
+        if (input.role === 'student') {
+            if (!input.college.trim()) next.college = 'College name is required.';
+            if (!input.rollNumber.trim()) next.rollNumber = 'Roll number is required.';
+        }
+        if (input.role === 'admin' && !input.adminCode) next.adminCode = 'Admin signup code is required.';
+        if (!agreed) next.agreed = 'You must accept the Terms and Privacy Policy.';
+        return next;
+    };
+
     const submitHandler = async (e) => {
         e.preventDefault();
+        const next = validate();
+        setErrors(next);
+        if (Object.keys(next).length > 0) {
+            toast.error('Please fix the highlighted fields.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append("fullname", input.fullname);
         formData.append("email", input.email);
-        formData.append("phoneNumber", input.phoneNumber);
+        formData.append("phoneNumber", String(input.phoneNumber).replace(/\D/g, ''));
         formData.append("password", input.password);
         formData.append("role", input.role);
+        if (input.role === 'student') {
+            formData.append("college", input.college);
+            formData.append("rollNumber", input.rollNumber);
+        }
         if (input.role === 'admin' && input.adminCode) formData.append("adminCode", input.adminCode);
         if (input.file) formData.append("file", input.file);
 
@@ -45,8 +87,8 @@ const Signup = () => {
                 withCredentials: true,
             });
             if (res.data.success) {
-                navigate("/login");
                 toast.success(res.data.message);
+                navigate("/login");
             }
         } catch (error) {
             toast.error(error.response?.data?.message || "Registration failed");
@@ -56,45 +98,67 @@ const Signup = () => {
     };
 
     useEffect(() => {
-        if (user) navigate("/dashboard");
+        if (!user) return;
+        const dest = user.role === 'admin'
+            ? '/admin/overview'
+            : user.role === 'recruiter'
+                ? '/recruiter/applicants'
+                : '/dashboard';
+        navigate(dest);
+        // eslint-disable-next-line
     }, []);
+
+    const helperText = useMemo(() => ({
+        email: 'We will send approval and job notifications to this address.',
+        phoneNumber: '10-digit number, digits only (e.g. 9876543210).',
+        password: 'At least 6 characters.',
+    }), []);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl gradient-border flex items-center justify-center">
-                            <span className="text-white font-bold text-xs">JOH</span>
-                        </div>
-                        <span className="text-2xl font-bold text-foreground tracking-tight">Job-O-Hire</span>
+                        <img src={logo} alt="Job-O-Hire" className="h-12 w-auto" />
                     </Link>
-                    <p className="text-sm text-muted-foreground mt-2">India-Japan Talent Bridge</p>
+                    <p className="text-sm text-muted-foreground mt-2">Unlocking Latent Talent</p>
                 </div>
 
                 <div className="glass-card rounded-2xl p-6">
                     <h1 className="font-bold text-xl text-foreground mb-6">Sign Up</h1>
-                    <form onSubmit={submitHandler} className="space-y-4">
+                    <form onSubmit={submitHandler} className="space-y-4" noValidate>
                         <div>
                             <Label className="text-foreground text-sm">Full Name</Label>
                             <Input type="text" value={input.fullname} name="fullname" onChange={changeEventHandler}
                                 placeholder="John Doe" className="mt-1 bg-white/5 border-border text-foreground" />
+                            {errors.fullname && <p className="text-xs text-red-400 mt-1">{errors.fullname}</p>}
                         </div>
                         <div>
                             <Label className="text-foreground text-sm">Email</Label>
                             <Input type="email" value={input.email} name="email" onChange={changeEventHandler}
                                 placeholder="you@example.com" className="mt-1 bg-white/5 border-border text-foreground" />
+                            {errors.email
+                                ? <p className="text-xs text-red-400 mt-1">{errors.email}</p>
+                                : <p className="text-xs text-muted-foreground mt-1">{helperText.email}</p>}
                         </div>
                         <div>
                             <Label className="text-foreground text-sm">Phone Number</Label>
-                            <Input type="text" value={input.phoneNumber} name="phoneNumber" onChange={changeEventHandler}
-                                placeholder="9876543210" className="mt-1 bg-white/5 border-border text-foreground" />
+                            <Input type="tel" inputMode="numeric" value={input.phoneNumber} name="phoneNumber"
+                                onChange={changeEventHandler} placeholder="9876543210"
+                                className="mt-1 bg-white/5 border-border text-foreground" />
+                            {errors.phoneNumber
+                                ? <p className="text-xs text-red-400 mt-1">{errors.phoneNumber}</p>
+                                : <p className="text-xs text-muted-foreground mt-1">{helperText.phoneNumber}</p>}
                         </div>
                         <div>
                             <Label className="text-foreground text-sm">Password</Label>
                             <Input type="password" value={input.password} name="password" onChange={changeEventHandler}
                                 placeholder="Create a password" className="mt-1 bg-white/5 border-border text-foreground" />
+                            {errors.password
+                                ? <p className="text-xs text-red-400 mt-1">{errors.password}</p>
+                                : <p className="text-xs text-muted-foreground mt-1">{helperText.password}</p>}
                         </div>
+
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div>
                                 <Label className="text-foreground text-sm mb-2 block">Role</Label>
@@ -111,6 +175,7 @@ const Signup = () => {
                                 <p className="text-xs text-muted-foreground mt-2">
                                     Recruiter accounts are issued by an administrator after a company is registered.
                                 </p>
+                                {errors.role && <p className="text-xs text-red-400 mt-1">{errors.role}</p>}
                             </div>
                             <div>
                                 <Label className="text-foreground text-sm">Profile Photo</Label>
@@ -119,22 +184,64 @@ const Signup = () => {
                             </div>
                         </div>
 
+                        {input.role === 'student' && (
+                            <>
+                                <div>
+                                    <Label className="text-foreground text-sm">College Name</Label>
+                                    <Input type="text" name="college" value={input.college} onChange={changeEventHandler}
+                                        placeholder="e.g. IIT Delhi"
+                                        className="mt-1 bg-white/5 border-border text-foreground" />
+                                    {errors.college && <p className="text-xs text-red-400 mt-1">{errors.college}</p>}
+                                </div>
+                                <div>
+                                    <Label className="text-foreground text-sm">Roll Number</Label>
+                                    <Input type="text" name="rollNumber" value={input.rollNumber} onChange={changeEventHandler}
+                                        placeholder="e.g. 2023CS1234"
+                                        className="mt-1 bg-white/5 border-border text-foreground" />
+                                    {errors.rollNumber && <p className="text-xs text-red-400 mt-1">{errors.rollNumber}</p>}
+                                </div>
+                                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                                    <p className="text-xs text-amber-300">
+                                        Student accounts require admin approval. You'll be able to log in once an
+                                        administrator verifies your details.
+                                    </p>
+                                </div>
+                            </>
+                        )}
+
                         {input.role === 'admin' && (
                             <div>
                                 <Label className="text-foreground text-sm">Admin Signup Code</Label>
-                                <Input
-                                    type="password"
-                                    name="adminCode"
-                                    value={input.adminCode}
+                                <Input type="password" name="adminCode" value={input.adminCode}
                                     onChange={changeEventHandler}
                                     placeholder="Required to create an admin account"
-                                    className="mt-1 bg-white/5 border-border text-foreground"
-                                />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Ask the site owner for the admin signup code.
-                                </p>
+                                    className="mt-1 bg-white/5 border-border text-foreground" />
+                                {errors.adminCode
+                                    ? <p className="text-xs text-red-400 mt-1">{errors.adminCode}</p>
+                                    : <p className="text-xs text-muted-foreground mt-1">Ask the site owner for the admin signup code.</p>}
                             </div>
                         )}
+
+                        <div className="flex items-start gap-2 pt-2">
+                            <input
+                                id="agree-tnc"
+                                type="checkbox"
+                                checked={agreed}
+                                onChange={(e) => {
+                                    setAgreed(e.target.checked);
+                                    if (errors.agreed) setErrors({ ...errors, agreed: '' });
+                                }}
+                                className="mt-1 w-4 h-4 accent-primary cursor-pointer"
+                            />
+                            <label htmlFor="agree-tnc" className="text-xs text-muted-foreground cursor-pointer">
+                                I agree to the{' '}
+                                <button type="button" onClick={() => setLegalOpen(true)}
+                                    className="text-primary hover:underline">
+                                    Terms of Service and Privacy Policy
+                                </button>.
+                            </label>
+                        </div>
+                        {errors.agreed && <p className="text-xs text-red-400 -mt-2">{errors.agreed}</p>}
 
                         {loading ? (
                             <Button className="w-full bg-primary" disabled>
@@ -151,6 +258,15 @@ const Signup = () => {
                     </form>
                 </div>
             </div>
+
+            <Dialog open={legalOpen} onOpenChange={setLegalOpen}>
+                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Terms, Privacy & Policies</DialogTitle>
+                    </DialogHeader>
+                    <PrivacyContent />
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

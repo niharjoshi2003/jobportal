@@ -36,6 +36,26 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    rollNumber: {
+        type: String,
+        default: ""
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'approved'
+    },
+    approvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    approvedAt: {
+        type: Date
+    },
+    rejectionReason: {
+        type: String,
+        default: ""
+    },
     graduationYear: {
         type: Number
     },

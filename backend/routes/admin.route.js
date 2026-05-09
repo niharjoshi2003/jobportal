@@ -4,6 +4,7 @@ import authorize from "../middlewares/authorize.js";
 import {
     getStats,
     listUsers, updateUserRole, deleteUser,
+    approveStudent, rejectStudent,
     listCompanies, setCompanyVerified, deleteCompany,
     createCompanyWithRecruiter, resetRecruiterPassword,
     listJobs, deleteJob,
@@ -18,6 +19,8 @@ router.get("/stats", getStats);
 
 router.get("/users", listUsers);
 router.patch("/users/:id/role", updateUserRole);
+router.patch("/users/:id/approve", approveStudent);
+router.patch("/users/:id/reject", rejectStudent);
 router.delete("/users/:id", deleteUser);
 
 router.get("/companies", listCompanies);

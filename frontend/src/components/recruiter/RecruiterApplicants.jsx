@@ -68,7 +68,7 @@ const RecruiterApplicants = () => {
             const res = await axios.get(`${USER_API_END_POINT}/logout`, { withCredentials: true });
             if (res.data?.success) {
                 dispatch(setUser(null));
-                navigate('/login');
+                navigate('/portal-login');
             }
         } catch {
             toast.error('Logout failed.');

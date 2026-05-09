@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Users, Building2, Briefcase, GraduationCap, FileText, ShieldCheck, Clock, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, Building2, Briefcase, GraduationCap, FileText, ShieldCheck, Clock, TrendingUp, UserCheck } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
 
@@ -47,11 +48,35 @@ const AdminOverview = () => {
                 <p className="text-red-400">{error}</p>
             ) : (
                 <div className="space-y-6">
+                    {stats?.users?.pendingStudents > 0 && (
+                        <Link
+                            to="/admin/pending-students"
+                            className="block rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 hover:bg-amber-500/15 transition-colors"
+                        >
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-lg bg-amber-500/20">
+                                        <UserCheck size={20} className="text-amber-300" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-amber-200">
+                                            {stats.users.pendingStudents} student{stats.users.pendingStudents === 1 ? '' : 's'} awaiting your approval
+                                        </p>
+                                        <p className="text-xs text-amber-300/80 mt-0.5">
+                                            Review their college and roll number, then approve or reject.
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="text-xs text-amber-200 font-medium">Review &rarr;</span>
+                            </div>
+                        </Link>
+                    )}
+
                     <div>
                         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Users</h2>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <StatCard icon={Users} label="Total Users" value={stats?.users?.total} color="primary" />
-                            <StatCard icon={Users} label="Students" value={stats?.users?.students} color="blue-400" />
+                            <StatCard icon={Users} label="Students" value={stats?.users?.students} sub={`${stats?.users?.pendingStudents || 0} pending approval`} color="blue-400" />
                             <StatCard icon={Users} label="Recruiters" value={stats?.users?.recruiters} color="purple-400" />
                             <StatCard icon={ShieldCheck} label="Admins" value={stats?.users?.admins} color="pink-400" />
                         </div>
