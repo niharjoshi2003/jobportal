@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Trash2, ShieldCheck } from 'lucide-react';
+import { Search, Trash2, ShieldCheck, Plus, Briefcase } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
@@ -42,6 +43,19 @@ const AdminAllJobs = () => {
 
     return (
         <AdminShell title="Jobs" subtitle="All jobs across the platform">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <p className="text-sm text-muted-foreground">
+                    Post a new job for any registered company. All approved students will be notified.
+                </p>
+                <Link
+                    to="/admin/jobs/create"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors shadow shadow-primary/20"
+                >
+                    <Plus size={16} />
+                    Post New Job
+                </Link>
+            </div>
+
             <div className="flex items-center gap-3 mb-4 flex-wrap">
                 <form onSubmit={(e) => { e.preventDefault(); fetchJobs(); }} className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border border-border w-72">
                     <Search size={16} className="text-muted-foreground" />
@@ -72,7 +86,27 @@ const AdminAllJobs = () => {
                         {loading ? (
                             <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
                         ) : jobs.length === 0 ? (
-                            <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No jobs found</TableCell></TableRow>
+                            <TableRow>
+                                <TableCell colSpan={7} className="text-center py-10">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <Briefcase size={20} className="text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-foreground">No jobs posted yet</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                Post the first job to start receiving student applications.
+                                            </p>
+                                        </div>
+                                        <Link
+                                            to="/admin/jobs/create"
+                                            className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90"
+                                        >
+                                            <Plus size={14} /> Post New Job
+                                        </Link>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
                         ) : jobs.map(j => (
                             <TableRow key={j._id}>
                                 <TableCell className="font-medium">{j.title}</TableCell>
