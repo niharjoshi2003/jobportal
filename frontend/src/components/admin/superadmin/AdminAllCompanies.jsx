@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Trash2, ShieldCheck, ShieldOff, KeyRound, Copy } from 'lucide-react';
+import { Search, Trash2, ShieldCheck, ShieldOff, KeyRound, Copy, Plus, Briefcase } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
@@ -9,6 +10,7 @@ import { Avatar, AvatarImage } from '../../ui/avatar';
 import { Button } from '../../ui/button';
 
 const AdminAllCompanies = () => {
+    const navigate = useNavigate();
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [q, setQ] = useState('');
@@ -100,6 +102,19 @@ const AdminAllCompanies = () => {
 
     return (
         <AdminShell title="Companies" subtitle="Approve, manage, and remove company accounts">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <p className="text-sm text-muted-foreground">
+                    Register a new partner company &mdash; the system will create the recruiter login automatically.
+                </p>
+                <Link
+                    to="/admin/companies/create"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors shadow shadow-primary/20"
+                >
+                    <Plus size={16} />
+                    Register New Company
+                </Link>
+            </div>
+
             <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 mb-4 text-xs text-muted-foreground">
                 <span className="text-blue-300 font-medium">Recruiter credentials:</span>{' '}
                 The recruiter's login email is shown next to each company. Passwords are stored
@@ -145,7 +160,27 @@ const AdminAllCompanies = () => {
                         {loading ? (
                             <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
                         ) : companies.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No companies found</TableCell></TableRow>
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-10">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <Plus size={20} className="text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-foreground">No companies registered yet</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                Add your first partner company to start posting jobs.
+                                            </p>
+                                        </div>
+                                        <Link
+                                            to="/admin/companies/create"
+                                            className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90"
+                                        >
+                                            <Plus size={14} /> Register New Company
+                                        </Link>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
                         ) : companies.map(c => (
                             <TableRow key={c._id}>
                                 <TableCell>
@@ -191,6 +226,14 @@ const AdminAllCompanies = () => {
                                 <TableCell className="text-muted-foreground">{c.createdAt?.split('T')[0]}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2 flex-wrap">
+                                        <button
+                                            onClick={() => navigate(`/admin/jobs/create?companyId=${c._id}`)}
+                                            className="px-2 py-1 rounded-md text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 inline-flex items-center gap-1"
+                                            title="Post a new job for this company"
+                                        >
+                                            <Briefcase size={12} />
+                                            Post Job
+                                        </button>
                                         <button
                                             onClick={() => resetRecruiterPassword(c._id, c.name)}
                                             disabled={resettingId === c._id || !c.userId}

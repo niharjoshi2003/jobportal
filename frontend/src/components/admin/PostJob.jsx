@@ -11,8 +11,8 @@ import axios from 'axios';
 import { ADMIN_API_END_POINT, JOB_API_END_POINT } from '@/utils/constant';
 import { setCompanies } from '@/redux/companySlice';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 const PostJob = () => {
     const [input, setInput] = useState({
@@ -30,6 +30,8 @@ const PostJob = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const [searchParams] = useSearchParams();
+    const preselectedCompanyId = searchParams.get('companyId') || '';
 
     const { companies } = useSelector(store => store.company);
 
@@ -46,6 +48,17 @@ const PostJob = () => {
         };
         fetchAll();
     }, [dispatch]);
+
+    // Once companies arrive, lock in the pre-selected one (if a query param was
+    // provided) so the admin lands directly on the right context.
+    useEffect(() => {
+        if (!preselectedCompanyId || !companies?.length) return;
+        const match = companies.find(c => c._id === preselectedCompanyId);
+        if (match && input.companyId !== match._id) {
+            setInput(prev => ({ ...prev, companyId: match._id, companyName: match.name }));
+        }
+        // eslint-disable-next-line
+    }, [companies, preselectedCompanyId]);
 
     const changeEventHandler = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value });
@@ -108,11 +121,23 @@ const PostJob = () => {
         <div>
             <Navbar />
             <div className="max-w-4xl mx-auto px-4 my-8">
+                <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-3"
+                >
+                    <ArrowLeft size={14} /> Back
+                </button>
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-foreground">Post a New Job</h1>
                     <p className="text-sm text-muted-foreground mt-1">
                         Create a job opening for one of the registered companies. All approved students will be notified.
                     </p>
+                    {input.companyName && preselectedCompanyId && (
+                        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">
+                            Posting for <span className="font-semibold">{input.companyName}</span>
+                        </div>
+                    )}
                 </div>
 
                 <form onSubmit={submitHandler} className="space-y-6">
