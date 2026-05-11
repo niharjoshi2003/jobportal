@@ -25,6 +25,7 @@ import Applicants from './components/admin/Applicants';
 import InternshipApplicants from './components/admin/InternshipApplicants';
 import ProtectedRoute from './components/admin/ProtectedRoute';
 import RecruiterApplicants from './components/recruiter/RecruiterApplicants';
+import RecruiterJobApplicants from './components/recruiter/RecruiterJobApplicants';
 import AdminOverview from './components/admin/superadmin/AdminOverview';
 import AdminUsers from './components/admin/superadmin/AdminUsers';
 import AdminPendingStudents from './components/admin/superadmin/AdminPendingStudents';
@@ -76,6 +77,10 @@ const appRouter = createBrowserRouter([
     {
         path: '/recruiter/applicants',
         element: <ProtectedRoute roles={['recruiter']}><RecruiterApplicants /></ProtectedRoute>
+    },
+    {
+        path: '/recruiter/jobs/:jobId/applicants',
+        element: <ProtectedRoute roles={['recruiter']}><RecruiterJobApplicants /></ProtectedRoute>
     },
     // Admin-only management
     {
