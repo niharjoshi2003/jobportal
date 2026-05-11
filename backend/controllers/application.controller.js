@@ -1,6 +1,8 @@
 import { Application } from "../models/application.model.js";
 import { Job } from "../models/job.model.js";
 import { Company } from "../models/company.model.js";
+import { User } from "../models/user.model.js";
+import mongoose from "mongoose";
 
 export const applyJob = async (req, res) => {
     try {
@@ -78,7 +80,7 @@ export const getApplicants = async (req, res) => {
         const job = await Job.findById(jobId).populate({
             path: 'applications',
             options: { sort: { createdAt: -1 } },
-            populate: { path: 'applicant' }
+            populate: { path: 'applicant', select: '-password -notifications' }
         });
         if (!job) {
             return res.status(404).json({ message: 'Job not found.', success: false });
@@ -95,6 +97,116 @@ export const getApplicants = async (req, res) => {
         }
 
         return res.status(200).json({ job, success: true });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Server error', success: false });
+    }
+};
+
+// Recruiter dashboard: list every job belonging to the recruiter's company
+// with applicant counts (total + per-status). Powers the per-job overview.
+export const getRecruiterJobs = async (req, res) => {
+    try {
+        const company = await Company.findOne({ userId: req.user._id }).select('_id name');
+        if (!company) {
+            return res.status(404).json({
+                message: 'No company is linked to your account. Contact an administrator.',
+                success: false,
+            });
+        }
+
+        const jobs = await Job.find({ company: company._id })
+            .select('_id title location jobType salary position deadline createdAt')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (jobs.length === 0) {
+            return res.status(200).json({
+                company: { _id: company._id, name: company.name },
+                jobs: [],
+                success: true,
+            });
+        }
+
+        const jobIds = jobs.map((j) => j._id);
+        // Aggregate per-status counts per job in one round trip.
+        const agg = await Application.aggregate([
+            { $match: { job: { $in: jobIds } } },
+            { $group: { _id: { job: '$job', status: '$status' }, count: { $sum: 1 } } },
+        ]);
+
+        const countsByJob = {};
+        for (const row of agg) {
+            const key = String(row._id.job);
+            if (!countsByJob[key]) {
+                countsByJob[key] = { total: 0, pending: 0, shortlisted: 0, accepted: 0, rejected: 0 };
+            }
+            countsByJob[key][row._id.status] = row.count;
+            countsByJob[key].total += row.count;
+        }
+
+        const enriched = jobs.map((j) => ({
+            ...j,
+            counts: countsByJob[String(j._id)] || { total: 0, pending: 0, shortlisted: 0, accepted: 0, rejected: 0 },
+        }));
+
+        return res.status(200).json({
+            company: { _id: company._id, name: company.name },
+            jobs: enriched,
+            success: true,
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Server error', success: false });
+    }
+};
+
+// Recruiter-only: fetch full profile of a student, but ONLY if that student
+// has applied to at least one job belonging to the recruiter's company.
+export const getRecruiterApplicantProfile = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ message: 'Invalid user id.', success: false });
+        }
+
+        const company = await Company.findOne({ userId: req.user._id }).select('_id name');
+        if (!company) {
+            return res.status(404).json({
+                message: 'No company is linked to your account. Contact an administrator.',
+                success: false,
+            });
+        }
+
+        const jobs = await Job.find({ company: company._id }).select('_id title');
+        const jobIds = jobs.map((j) => j._id);
+
+        const hasApplied = await Application.exists({
+            job: { $in: jobIds },
+            applicant: userId,
+        });
+        if (!hasApplied) {
+            return res.status(403).json({
+                message: "This applicant has not applied to any of your company's jobs.",
+                success: false,
+            });
+        }
+
+        const applicant = await User.findById(userId).select('-password -notifications');
+        if (!applicant) {
+            return res.status(404).json({ message: 'Applicant not found.', success: false });
+        }
+
+        // Include the list of applications this candidate made for THIS company
+        // so the recruiter sees a full picture in the profile modal.
+        const applications = await Application.find({
+            job: { $in: jobIds },
+            applicant: userId,
+        })
+            .populate({ path: 'job', select: 'title location jobType' })
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({ applicant, applications, success: true });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Server error', success: false });
