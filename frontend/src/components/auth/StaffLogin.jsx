@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setLoading, setUser } from '@/redux/authSlice';
 import { Loader2, ShieldCheck, Building2, GraduationCap } from 'lucide-react';
 import { USER_API_END_POINT } from '@/utils/constant';
-import logo from '@/assets/logo.png';
+import BrandLogo from '../shared/BrandLogo';
 
 // Admin + Recruiter login. Students log in at /login.
 const StaffLogin = () => {
@@ -76,9 +76,9 @@ const StaffLogin = () => {
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-2">
-                        <img src={logo} alt="Job-O-Hire" className="h-12 w-auto" />
+                        <BrandLogo size="lg" showTagline />
                     </Link>
-                    <p className="text-sm text-muted-foreground mt-2">Portal Login</p>
+                    <p className="text-sm text-muted-foreground mt-2">Portal Access</p>
                 </div>
 
                 <div className="glass-card rounded-2xl p-6">
@@ -126,6 +126,11 @@ const StaffLogin = () => {
                             <Input type="password" value={input.password} name="password" onChange={changeEventHandler}
                                 placeholder="Your password"
                                 className="mt-1 bg-white/5 border-border text-foreground" />
+                            <div className="text-right mt-1">
+                                <Link to={`/forgot-password?role=${input.role}`} className="text-xs text-primary hover:underline">
+                                    Forgot password?
+                                </Link>
+                            </div>
                         </div>
 
                         <p className="text-xs text-muted-foreground">{activeHint}</p>

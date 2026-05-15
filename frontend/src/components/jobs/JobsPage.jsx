@@ -162,8 +162,11 @@ const JobsPage = () => {
             case 'open':
             default:
                 return filtered.filter(j => {
-                    if (j.deadline) return new Date(j.deadline) >= new Date();
-                    return true;
+                    const deadlineOpen = j.deadline ? new Date(j.deadline) >= new Date() : true;
+                    const openingsLeft = Number(j.position || 0) - Number(j.applications?.length || 0);
+                    const hasOpenings = openingsLeft > 0;
+                    const isOpenByStatus = !j.status || j.status === 'open';
+                    return deadlineOpen && hasOpenings && isOpenByStatus;
                 });
         }
     };

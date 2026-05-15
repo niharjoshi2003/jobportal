@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import {
@@ -206,18 +206,36 @@ const StudentProfileModal = ({ userId, open, onOpenChange }) => {
                                 {applications.map((a) => (
                                     <div
                                         key={a._id}
-                                        className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 border border-border text-sm"
+                                        className="p-2.5 rounded-lg bg-white/5 border border-border text-sm"
                                     >
-                                        <div>
-                                            <div className="text-foreground font-medium">{a.job?.title || 'Unknown job'}</div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {a.job?.location} {a.job?.jobType ? ` · ${a.job.jobType}` : ''} · Applied{' '}
-                                                {new Date(a.createdAt).toLocaleDateString()}
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <div className="text-foreground font-medium">{a.job?.title || 'Unknown job'}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {a.job?.location} {a.job?.jobType ? ` · ${a.job.jobType}` : ''} · Applied{' '}
+                                                    {new Date(a.createdAt).toLocaleDateString()}
+                                                </div>
                                             </div>
+                                            <span className={`text-xs px-2 py-1 rounded-md capitalize ${statusBadgeClass(a.status)}`}>
+                                                {a.status}
+                                            </span>
                                         </div>
-                                        <span className={`text-xs px-2 py-1 rounded-md capitalize ${statusBadgeClass(a.status)}`}>
-                                            {a.status}
-                                        </span>
+
+                                        {Array.isArray(a.applicationAnswers) && a.applicationAnswers.length > 0 && (
+                                            <div className="mt-3 space-y-2 border-t border-border pt-2.5">
+                                                {a.applicationAnswers.map((answer, answerIndex) => (
+                                                    <div key={`${a._id}-${answerIndex}`} className="text-xs">
+                                                        <p className="text-foreground font-medium">{answer.question}</p>
+                                                        <p className="text-muted-foreground whitespace-pre-wrap">{answer.answer}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {(!a.applicationAnswers || a.applicationAnswers.length === 0) && (
+                                            <div className="text-xs text-muted-foreground">
+                                                No custom question answers submitted for this application.
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

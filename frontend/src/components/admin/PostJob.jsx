@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Navbar from '../shared/Navbar';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -12,7 +12,7 @@ import { ADMIN_API_END_POINT, JOB_API_END_POINT } from '@/utils/constant';
 import { setCompanies } from '@/redux/companySlice';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 
 const PostJob = () => {
     const [input, setInput] = useState({
@@ -24,6 +24,11 @@ const PostJob = () => {
         jobType: "",
         experience: "",
         position: 1,
+        deadline: "",
+        companyOverview: "",
+        jobRequirementsDetail: "",
+        additionalInfo: "",
+        applicationQuestions: [],
         companyId: "",
         companyName: "",
     });
@@ -73,16 +78,83 @@ const PostJob = () => {
         });
     };
 
+    const addQuestion = () => {
+        setInput((prev) => ({
+            ...prev,
+            applicationQuestions: [
+                ...prev.applicationQuestions,
+                { question: "", type: "short_text", required: true, options: "" },
+            ],
+        }));
+    };
+
+    const removeQuestion = (index) => {
+        setInput((prev) => ({
+            ...prev,
+            applicationQuestions: prev.applicationQuestions.filter((_, idx) => idx !== index),
+        }));
+    };
+
+    const updateQuestion = (index, key, value) => {
+        setInput((prev) => ({
+            ...prev,
+            applicationQuestions: prev.applicationQuestions.map((question, idx) =>
+                idx === index ? { ...question, [key]: value } : question
+            ),
+        }));
+    };
+
     const submitHandler = async (e) => {
         e.preventDefault();
         if (!input.title || !input.description || !input.requirements ||
             input.salary === "" || !input.location || !input.jobType ||
-            input.experience === "" || !input.companyId) {
+            input.experience === "" || !input.companyId ||
+            !input.companyOverview || !input.jobRequirementsDetail || !input.additionalInfo) {
             toast.error('Please fill in all required fields.');
             return;
         }
         if (Number(input.position) <= 0) {
             toast.error('Number of openings must be greater than 0.');
+            return;
+        }
+        if (Number(input.salary) < 0) {
+            toast.error('Salary must be 0 or greater.');
+            return;
+        }
+        if (Number(input.experience) < 0) {
+            toast.error('Experience must be 0 or greater.');
+            return;
+        }
+        if (input.deadline) {
+            const selectedDeadline = new Date(input.deadline);
+            if (selectedDeadline <= new Date()) {
+                toast.error('Deadline must be in the future.');
+                return;
+            }
+        }
+
+        const normalizedQuestions = input.applicationQuestions
+            .map((question) => {
+                const normalized = {
+                    question: question.question.trim(),
+                    type: question.type,
+                    required: question.required !== false,
+                    options: question.type === "multiple_choice"
+                        ? String(question.options || "")
+                            .split(",")
+                            .map((option) => option.trim())
+                            .filter(Boolean)
+                        : [],
+                };
+                return normalized;
+            })
+            .filter((question) => question.question);
+
+        const invalidQuestion = normalizedQuestions.find(
+            (question) => question.type === "multiple_choice" && question.options.length < 2
+        );
+        if (invalidQuestion) {
+            toast.error(`"${invalidQuestion.question}" needs at least 2 options.`);
             return;
         }
 
@@ -95,6 +167,11 @@ const PostJob = () => {
             jobType: input.jobType,
             experience: input.experience,
             position: input.position,
+            deadline: input.deadline || undefined,
+            companyOverview: input.companyOverview,
+            jobRequirementsDetail: input.jobRequirementsDetail,
+            additionalInfo: input.additionalInfo,
+            applicationQuestions: normalizedQuestions,
             companyId: input.companyId,
         };
 
@@ -142,7 +219,45 @@ const PostJob = () => {
 
                 <form onSubmit={submitHandler} className="space-y-6">
                     <section className="glass-card rounded-2xl p-6 space-y-4">
-                        <h2 className="font-semibold text-foreground">Job Details</h2>
+                        <h2 className="font-semibold text-foreground">Company Details</h2>
+                        {hasCompanies ? (
+                            <div>
+                                <Label>Company *</Label>
+                                <Select value={input.companyId || undefined} onValueChange={selectChangeHandler}>
+                                    <SelectTrigger className="w-full md:w-[320px] mt-1">
+                                        <SelectValue placeholder="Select a company" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            {companies.map(company => (
+                                                <SelectItem key={company._id} value={company._id}>
+                                                    {company.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        ) : (
+                            <p className="text-xs text-red-400">
+                                No companies registered yet. Please register a company first before posting jobs.
+                            </p>
+                        )}
+                        <div>
+                            <Label>About Company *</Label>
+                            <textarea
+                                name="companyOverview"
+                                value={input.companyOverview}
+                                onChange={changeEventHandler}
+                                rows={4}
+                                className="mt-1 w-full rounded-md border border-border bg-white/5 px-3 py-2 text-sm text-foreground"
+                                placeholder="Introduce company culture, mission, business domain, and why students should join."
+                            />
+                        </div>
+                    </section>
+
+                    <section className="glass-card rounded-2xl p-6 space-y-4">
+                        <h2 className="font-semibold text-foreground">Job Requirements</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <Label>Title *</Label>
@@ -155,20 +270,20 @@ const PostJob = () => {
                                     placeholder="Full Time / Part Time / Contract" />
                             </div>
                             <div className="md:col-span-2">
-                                <Label>Description *</Label>
-                                <textarea
-                                    name="description"
-                                    value={input.description}
-                                    onChange={changeEventHandler}
-                                    rows={3}
-                                    className="mt-1 w-full rounded-md border border-border bg-white/5 px-3 py-2 text-sm text-foreground"
-                                    placeholder="Describe the role, responsibilities, etc."
-                                />
-                            </div>
-                            <div className="md:col-span-2">
                                 <Label>Requirements * (comma separated)</Label>
                                 <Input name="requirements" value={input.requirements} onChange={changeEventHandler}
                                     placeholder="React, Node.js, MongoDB" />
+                            </div>
+                            <div className="md:col-span-2">
+                                <Label>Detailed Requirements *</Label>
+                                <textarea
+                                    name="jobRequirementsDetail"
+                                    value={input.jobRequirementsDetail}
+                                    onChange={changeEventHandler}
+                                    rows={4}
+                                    className="mt-1 w-full rounded-md border border-border bg-white/5 px-3 py-2 text-sm text-foreground"
+                                    placeholder="Describe responsibilities, qualifications, tools, and selection criteria in detail."
+                                />
                             </div>
                             <div>
                                 <Label>Salary (LPA) *</Label>
@@ -190,30 +305,120 @@ const PostJob = () => {
                                 <Input type="number" name="position" value={input.position}
                                     onChange={changeEventHandler} min="1" />
                             </div>
+                            <div>
+                                <Label>Application Deadline</Label>
+                                <Input
+                                    type="date"
+                                    name="deadline"
+                                    value={input.deadline}
+                                    onChange={changeEventHandler}
+                                />
+                            </div>
                         </div>
                     </section>
 
                     <section className="glass-card rounded-2xl p-6 space-y-4">
-                        <h2 className="font-semibold text-foreground">Company *</h2>
-                        {hasCompanies ? (
-                            <Select value={input.companyId || undefined} onValueChange={selectChangeHandler}>
-                                <SelectTrigger className="w-full md:w-[320px]">
-                                    <SelectValue placeholder="Select a company" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        {companies.map(company => (
-                                            <SelectItem key={company._id} value={company._id}>
-                                                {company.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
+                        <h2 className="font-semibold text-foreground">Additional Information</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <Label>Role Summary *</Label>
+                                <textarea
+                                    name="description"
+                                    value={input.description}
+                                    onChange={changeEventHandler}
+                                    rows={4}
+                                    className="mt-1 w-full rounded-md border border-border bg-white/5 px-3 py-2 text-sm text-foreground"
+                                    placeholder="What this role does day-to-day."
+                                />
+                            </div>
+                            <div>
+                                <Label>Additional Info *</Label>
+                                <textarea
+                                    name="additionalInfo"
+                                    value={input.additionalInfo}
+                                    onChange={changeEventHandler}
+                                    rows={4}
+                                    className="mt-1 w-full rounded-md border border-border bg-white/5 px-3 py-2 text-sm text-foreground"
+                                    placeholder="Perks, work model, process timeline, onboarding details, or any extra notes."
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="glass-card rounded-2xl p-6 space-y-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="font-semibold text-foreground">Application Questions</h2>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Add custom questions for applicants. These answers are visible to recruiters/admins.
+                                </p>
+                            </div>
+                            <Button type="button" variant="outline" onClick={addQuestion} className="inline-flex items-center gap-1.5">
+                                <Plus size={14} /> Add Question
+                            </Button>
+                        </div>
+
+                        {input.applicationQuestions.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">No custom question added yet. Applicants can still apply directly.</p>
                         ) : (
-                            <p className="text-xs text-red-400">
-                                No companies registered yet. Please register a company first before posting jobs.
-                            </p>
+                            <div className="space-y-4">
+                                {input.applicationQuestions.map((question, index) => (
+                                    <div key={index} className="rounded-xl border border-border bg-white/5 p-4 space-y-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="md:col-span-2">
+                                                <Label>Question {index + 1} *</Label>
+                                                <Input
+                                                    value={question.question}
+                                                    onChange={(e) => updateQuestion(index, "question", e.target.value)}
+                                                    placeholder="e.g. What interests you in this role?"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label>Answer Type</Label>
+                                                <select
+                                                    value={question.type}
+                                                    onChange={(e) => updateQuestion(index, "type", e.target.value)}
+                                                    className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                                                >
+                                                    <option value="short_text">Short text</option>
+                                                    <option value="long_text">Long text</option>
+                                                    <option value="yes_no">Yes / No</option>
+                                                    <option value="multiple_choice">Multiple choice</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex items-center gap-2 pt-6">
+                                                <input
+                                                    id={`required-${index}`}
+                                                    type="checkbox"
+                                                    checked={question.required !== false}
+                                                    onChange={(e) => updateQuestion(index, "required", e.target.checked)}
+                                                />
+                                                <Label htmlFor={`required-${index}`}>Required question</Label>
+                                            </div>
+                                            {question.type === "multiple_choice" && (
+                                                <div className="md:col-span-2">
+                                                    <Label>Options (comma separated) *</Label>
+                                                    <Input
+                                                        value={question.options}
+                                                        onChange={(e) => updateQuestion(index, "options", e.target.value)}
+                                                        placeholder="Option 1, Option 2, Option 3"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                onClick={() => removeQuestion(index)}
+                                            >
+                                                <Trash2 size={14} className="mr-1.5" /> Remove
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         )}
                     </section>
 

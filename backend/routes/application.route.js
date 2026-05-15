@@ -8,7 +8,9 @@ import {
 
 const router = express.Router();
 
-router.route("/apply/:id").get(isAuthenticated, authorize("student"), applyJob);
+router.route("/apply/:id")
+    .get(isAuthenticated, authorize("student"), applyJob)
+    .post(isAuthenticated, authorize("student"), applyJob);
 router.route("/get").get(isAuthenticated, getAppliedJobs);
 
 // Recruiter dashboard: every applicant for the recruiter's company.

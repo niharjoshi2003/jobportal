@@ -17,7 +17,7 @@ export const MOCK_USER = {
     _id: "mock_student_001",
     fullname: "Nihar Joshi",
     email: "student@jobohire.com",
-    phoneNumber: 9876543210,
+    phoneNumber: 9000000000,
     role: "student",
     gender: "Male",
     college: "IIT Delhi",
@@ -51,7 +51,7 @@ export const MOCK_RECRUITER = {
     _id: "mock_recruiter_001",
     fullname: "Admin Recruiter",
     email: "recruiter@jobohire.com",
-    phoneNumber: 9876543211,
+    phoneNumber: 9000000001,
     role: "recruiter",
     profile: {
         bio: "Hiring manager at Tech Japan",

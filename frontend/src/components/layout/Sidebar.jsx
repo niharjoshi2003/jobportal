@@ -11,7 +11,7 @@ import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
-import logo from '@/assets/logo.png';
+import BrandLogo from '../shared/BrandLogo';
 
 const menuItems = [
     { path: '/dashboard', label: 'Home', icon: Home },
@@ -53,7 +53,12 @@ const Sidebar = () => {
             <div className="px-4 py-5 flex items-center justify-between">
                 {!collapsed && (
                     <Link to="/dashboard" className="flex items-center gap-2">
-                        <img src={logo} alt="Job-O-Hire" className="h-8 w-auto" />
+                        <BrandLogo size="sm" />
+                    </Link>
+                )}
+                {collapsed && (
+                    <Link to="/dashboard" className="flex items-center justify-center w-8 h-8">
+                        <BrandLogo size="sm" showWordmark={false} />
                     </Link>
                 )}
                 <button

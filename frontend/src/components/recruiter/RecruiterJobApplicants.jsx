@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -126,6 +126,13 @@ const RecruiterJobApplicants = () => {
                 key: 'appliedAt',
                 label: 'Applied Date',
                 value: (a) => (a.createdAt ? new Date(a.createdAt).toISOString().split('T')[0] : ''),
+            },
+            {
+                key: 'customResponses',
+                label: 'Custom Responses',
+                value: (a) => (a.applicationAnswers || [])
+                    .map((ans) => `${ans.question}: ${ans.answer}`)
+                    .join(' | '),
             },
             { key: 'resume', label: 'Resume URL', value: (a) => a.applicant?.profile?.resume || '' },
         ];

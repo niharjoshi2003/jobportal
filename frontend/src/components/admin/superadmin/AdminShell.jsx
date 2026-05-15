@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { LayoutDashboard, Users, Building2, Briefcase, GraduationCap, LogOut, ShieldCheck, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Briefcase, GraduationCap, LogOut, ShieldCheck, UserCheck, ScrollText } from 'lucide-react';
 import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
-import logo from '@/assets/logo.png';
+import BrandLogo from '../../shared/BrandLogo';
 
 const navItems = [
     { path: '/admin/overview', label: 'Overview', icon: LayoutDashboard },
@@ -15,6 +15,7 @@ const navItems = [
     { path: '/admin/all-companies', label: 'Companies', icon: Building2 },
     { path: '/admin/all-jobs', label: 'Jobs', icon: Briefcase },
     { path: '/admin/all-internships', label: 'Internships', icon: GraduationCap },
+    { path: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
 ];
 
 const AdminShell = ({ children, title, subtitle }) => {
@@ -35,7 +36,7 @@ const AdminShell = ({ children, title, subtitle }) => {
             <aside className="w-64 bg-[hsl(222,47%,8%)] border-r border-white/10 flex flex-col">
                 <div className="px-5 py-5 border-b border-white/10">
                     <Link to="/admin/overview" className="flex items-center gap-2">
-                        <img src={logo} alt="Job-O-Hire" className="h-8 w-auto" />
+                        <BrandLogo size="sm" />
                         <span className="text-[10px] text-purple-300 uppercase tracking-wider font-semibold ml-1">Admin</span>
                     </Link>
                 </div>

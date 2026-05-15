@@ -12,7 +12,7 @@ import { setLoading } from '@/redux/authSlice';
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import PrivacyContent from '../legal/PrivacyContent';
-import logo from '@/assets/logo.png';
+import BrandLogo from '../shared/BrandLogo';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^\d{10}$/;
@@ -110,7 +110,7 @@ const Signup = () => {
 
     const helperText = useMemo(() => ({
         email: 'We will send approval and job notifications to this address.',
-        phoneNumber: '10-digit number, digits only (e.g. 9876543210).',
+        phoneNumber: '10-digit number, digits only (e.g. 9000000000).',
         password: 'At least 6 characters.',
     }), []);
 
@@ -119,9 +119,8 @@ const Signup = () => {
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-2">
-                        <img src={logo} alt="Job-O-Hire" className="h-12 w-auto" />
+                        <BrandLogo size="lg" showTagline />
                     </Link>
-                    <p className="text-sm text-muted-foreground mt-2">Unlocking Latent Talent</p>
                 </div>
 
                 <div className="glass-card rounded-2xl p-6">
@@ -144,7 +143,7 @@ const Signup = () => {
                         <div>
                             <Label className="text-foreground text-sm">Phone Number</Label>
                             <Input type="tel" inputMode="numeric" value={input.phoneNumber} name="phoneNumber"
-                                onChange={changeEventHandler} placeholder="9876543210"
+                                onChange={changeEventHandler} placeholder="9000000000"
                                 className="mt-1 bg-white/5 border-border text-foreground" />
                             {errors.phoneNumber
                                 ? <p className="text-xs text-red-400 mt-1">{errors.phoneNumber}</p>

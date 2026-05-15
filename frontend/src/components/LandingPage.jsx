@@ -10,7 +10,7 @@ import { useSelector } from 'react-redux';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
-import logo from '@/assets/logo.png';
+import BrandLogo from './shared/BrandLogo';
 
 const fadeUp = {
     hidden: { opacity: 0, y: 40 },
@@ -64,20 +64,6 @@ const SectionLabel = ({ icon: Icon, text, color = 'primary' }) => {
             <Icon size={13} />
             {text}
         </motion.div>
-    );
-};
-
-const BrandLogo = ({ size = 'md' }) => {
-    const height = { sm: 28, md: 36, lg: 44 }[size] || 36;
-    return (
-        <div className="flex items-center group select-none">
-            <img
-                src={logo}
-                alt="Job-O-Hire"
-                style={{ height, width: 'auto' }}
-                className="transition-transform duration-300 group-hover:scale-[1.04] drop-shadow-[0_4px_18px_rgba(255,255,255,0.08)]"
-            />
-        </div>
     );
 };
 

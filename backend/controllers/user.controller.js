@@ -1,12 +1,16 @@
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
+import { sendEmail } from "../utils/mailer.js";
+import { logger } from "../utils/logger.js";
 
 export const register = async (req, res) => {
     try {
         const { fullname, email, phoneNumber, password, role, adminCode, college, rollNumber } = req.body;
+        const normalizedEmail = String(email || "").trim().toLowerCase();
 
         if (!fullname || !email || !phoneNumber || !password || !role) {
             return res.status(400).json({ message: "Something is missing", success: false });
@@ -21,7 +25,7 @@ export const register = async (req, res) => {
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(String(email).trim())) {
+        if (!emailRegex.test(normalizedEmail)) {
             return res.status(400).json({ message: "Please enter a valid email address.", success: false });
         }
 
@@ -61,7 +65,7 @@ export const register = async (req, res) => {
             profilePhotoUrl = cloudResponse.secure_url;
         }
 
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: normalizedEmail });
         if (existingUser) {
             return res.status(400).json({ message: 'User already exists with this email.', success: false });
         }
@@ -70,7 +74,7 @@ export const register = async (req, res) => {
 
         await User.create({
             fullname,
-            email,
+            email: normalizedEmail,
             phoneNumber: Number(phoneStr),
             password: hashedPassword,
             role,
@@ -96,12 +100,13 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password, role } = req.body;
+        const normalizedEmail = String(email || "").trim().toLowerCase();
 
         if (!email || !password || !role) {
             return res.status(400).json({ message: "Something is missing", success: false });
         }
 
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email: normalizedEmail });
         if (!user) {
             return res.status(400).json({ message: "Incorrect email or password.", success: false });
         }
@@ -173,10 +178,123 @@ export const login = async (req, res) => {
     }
 };
 
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email, role } = req.body || {};
+        const genericResponse = {
+            success: true,
+            message: "If an account exists for this email, a password reset link has been sent.",
+        };
+
+        if (!email || !String(email).trim()) {
+            return res.status(400).json({ success: false, message: "Email is required." });
+        }
+
+        const filter = { email: String(email).trim().toLowerCase() };
+        if (role && ["student", "recruiter", "admin"].includes(String(role))) {
+            filter.role = String(role);
+        }
+        const user = await User.findOne(filter);
+        if (!user) return res.status(200).json(genericResponse);
+
+        const rawToken = crypto.randomBytes(32).toString("hex");
+        const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+        const expiry = new Date(Date.now() + 30 * 60 * 1000);
+
+        user.passwordResetTokenHash = tokenHash;
+        user.passwordResetExpiresAt = expiry;
+        await user.save();
+
+        const frontendBase = String(process.env.FRONTEND_URL || "http://localhost:5173")
+            .split(",")[0]
+            .trim();
+        const resetUrl = `${frontendBase}/reset-password?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
+
+        const mailResult = await sendEmail({
+            to: user.email,
+            subject: "Reset your Job-O-Hire password",
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+                    <h2>Password Reset Request</h2>
+                    <p>We received a request to reset your password.</p>
+                    <p>
+                        <a href="${resetUrl}" style="display:inline-block;padding:10px 16px;background:#6d28d9;color:#fff;text-decoration:none;border-radius:6px;">
+                            Reset Password
+                        </a>
+                    </p>
+                    <p>This link expires in 30 minutes.</p>
+                    <p>If you did not request this, you can ignore this email.</p>
+                </div>
+            `,
+        });
+
+        const response = { ...genericResponse };
+        const allowResetFallback =
+            process.env.NODE_ENV !== "production" &&
+            String(process.env.ALLOW_RESET_FALLBACK || "true").toLowerCase() === "true";
+
+        if (!mailResult?.sent && allowResetFallback) {
+            response.message = "SMTP is not configured. Use the fallback reset link below.";
+            response.fallback = {
+                resetLink: resetUrl,
+                resetToken: rawToken,
+                expiresAt: expiry.toISOString(),
+            };
+        }
+        if (process.env.NODE_ENV === "test") {
+            response.resetToken = rawToken;
+        }
+        return res.status(200).json(response);
+    } catch (error) {
+        logger.error("forgot_password_failed", { error: error?.message });
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword, email } = req.body || {};
+        if (!token || !newPassword) {
+            return res.status(400).json({ success: false, message: "Token and new password are required." });
+        }
+        if (String(newPassword).length < 6) {
+            return res.status(400).json({ success: false, message: "Password must be at least 6 characters long." });
+        }
+
+        const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
+        const filter = {
+            passwordResetTokenHash: tokenHash,
+            passwordResetExpiresAt: { $gt: new Date() },
+        };
+        if (email) filter.email = String(email).trim().toLowerCase();
+
+        const user = await User.findOne(filter);
+        if (!user) {
+            return res.status(400).json({ success: false, message: "Invalid or expired reset link." });
+        }
+
+        user.password = await bcrypt.hash(String(newPassword), 10);
+        user.passwordResetTokenHash = "";
+        user.passwordResetExpiresAt = undefined;
+        await user.save();
+
+        return res.status(200).json({ success: true, message: "Password reset successfully. Please login." });
+    } catch (error) {
+        logger.error("reset_password_failed", { error: error?.message });
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
 export const logout = async (req, res) => {
     try {
+        const isProd = process.env.NODE_ENV === "production";
         return res.status(200)
-            .cookie("token", "", { maxAge: 0 })
+            .cookie("token", "", {
+                maxAge: 0,
+                httpOnly: true,
+                sameSite: isProd ? "none" : "lax",
+                secure: isProd,
+            })
             .json({ message: "Logged out successfully.", success: true });
     } catch (error) {
         console.log(error);
@@ -212,7 +330,7 @@ export const updateProfile = async (req, res) => {
         }
 
         if (fullname) user.fullname = fullname;
-        if (email) user.email = email;
+        if (email) user.email = String(email).trim().toLowerCase();
         if (phoneNumber) user.phoneNumber = phoneNumber;
         if (bio) user.profile.bio = bio;
         if (skills) user.profile.skills = skillsArray;

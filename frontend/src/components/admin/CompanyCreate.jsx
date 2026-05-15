@@ -163,7 +163,7 @@ const CompanyCreate = () => {
                             </div>
                             <div>
                                 <Label>Recruiter Phone *</Label>
-                                <Input name="recruiterPhone" value={form.recruiterPhone} onChange={onChange} placeholder="9876543210" />
+                                <Input name="recruiterPhone" value={form.recruiterPhone} onChange={onChange} placeholder="9000000000" />
                             </div>
                         </div>
                     </section>

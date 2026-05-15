@@ -4,8 +4,10 @@ import { Job } from "../models/job.model.js";
 import { Internship } from "../models/internship.model.js";
 import { Application } from "../models/application.model.js";
 import { InternshipApplication } from "../models/internshipApplication.model.js";
+import { AuditLog } from "../models/auditLog.model.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { recordAuditLog } from "../utils/audit.js";
 
 // Generate a human-readable but strong password (12 chars, mixed).
 const generatePassword = () => {
@@ -96,6 +98,15 @@ export const approveStudent = async (req, res) => {
         user.approvedAt = new Date();
         user.rejectionReason = "";
         await user.save();
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "student.approved",
+            entityType: "User",
+            entityId: user._id,
+            metadata: { targetEmail: user.email },
+        });
         const safe = user.toObject();
         delete safe.password;
         return res.status(200).json({ message: "Student approved.", user: safe, success: true });
@@ -118,6 +129,15 @@ export const rejectStudent = async (req, res) => {
         user.approvedBy = req.user._id;
         user.approvedAt = new Date();
         await user.save();
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "student.rejected",
+            entityType: "User",
+            entityId: user._id,
+            metadata: { targetEmail: user.email, reason: user.rejectionReason || null },
+        });
         const safe = user.toObject();
         delete safe.password;
         return res.status(200).json({ message: "Student rejected.", user: safe, success: true });
@@ -140,12 +160,24 @@ export const updateUserRole = async (req, res) => {
                 success: false,
             });
         }
+        const existingUser = await User.findById(req.params.id).select("role email");
+        if (!existingUser) return res.status(404).json({ message: "User not found.", success: false });
+
         const user = await User.findByIdAndUpdate(
             req.params.id,
             { role },
             { new: true }
         ).select("-password");
         if (!user) return res.status(404).json({ message: "User not found.", success: false });
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "user.role_updated",
+            entityType: "User",
+            entityId: user._id,
+            metadata: { targetEmail: user.email, previousRole: existingUser.role, nextRole: role },
+        });
         return res.status(200).json({ message: "User role updated.", user, success: true });
     } catch (error) {
         console.log(error);
@@ -161,8 +193,17 @@ export const deleteUser = async (req, res) => {
                 success: false,
             });
         }
-        const user = await User.findByIdAndDelete(req.params.id);
+        const user = await User.findByIdAndDelete(req.params.id).select("email role");
         if (!user) return res.status(404).json({ message: "User not found.", success: false });
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "user.deleted",
+            entityType: "User",
+            entityId: user._id,
+            metadata: { targetEmail: user.email, targetRole: user.role },
+        });
         return res.status(200).json({ message: "User deleted.", success: true });
     } catch (error) {
         console.log(error);
@@ -240,6 +281,15 @@ export const createCompanyWithRecruiter = async (req, res) => {
         recruiter.profile = recruiter.profile || {};
         recruiter.profile.company = company._id;
         await recruiter.save();
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "company.created_with_recruiter",
+            entityType: "Company",
+            entityId: company._id,
+            metadata: { companyName: company.name, recruiterEmail: recruiter.email },
+        });
 
         return res.status(201).json({
             message: "Company and recruiter account created. Share these credentials with the recruiter — the password will not be shown again.",
@@ -275,6 +325,15 @@ export const resetRecruiterPassword = async (req, res) => {
         const generatedPassword = generatePassword();
         recruiter.password = await bcrypt.hash(generatedPassword, 10);
         await recruiter.save();
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "recruiter.password_reset",
+            entityType: "Company",
+            entityId: company._id,
+            metadata: { recruiterEmail: recruiter.email, companyName: company.name },
+        });
 
         return res.status(200).json({
             message: "Recruiter password reset. Share these credentials — the password will not be shown again.",
@@ -311,6 +370,8 @@ export const listCompanies = async (req, res) => {
 export const setCompanyVerified = async (req, res) => {
     try {
         const { verified } = req.body;
+        const existingCompany = await Company.findById(req.params.id).select("verified name");
+        if (!existingCompany) return res.status(404).json({ message: "Company not found.", success: false });
         const company = await Company.findByIdAndUpdate(
             req.params.id,
             {
@@ -321,6 +382,15 @@ export const setCompanyVerified = async (req, res) => {
             { new: true }
         );
         if (!company) return res.status(404).json({ message: "Company not found.", success: false });
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "company.verification_updated",
+            entityType: "Company",
+            entityId: company._id,
+            metadata: { companyName: company.name, previousVerified: existingCompany.verified, nextVerified: !!verified },
+        });
         return res.status(200).json({
             message: verified ? "Company approved." : "Company verification revoked.",
             company,
@@ -334,7 +404,7 @@ export const setCompanyVerified = async (req, res) => {
 
 export const deleteCompany = async (req, res) => {
     try {
-        const company = await Company.findByIdAndDelete(req.params.id);
+        const company = await Company.findByIdAndDelete(req.params.id).select("name userId");
         if (!company) return res.status(404).json({ message: "Company not found.", success: false });
 
         // Cascade: delete jobs, internships, and their applications for this company.
@@ -349,6 +419,19 @@ export const deleteCompany = async (req, res) => {
             InternshipApplication.deleteMany({ internship: { $in: internshipIds } }),
             Internship.deleteMany({ company: req.params.id }),
         ]);
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "company.deleted",
+            entityType: "Company",
+            entityId: company._id,
+            metadata: {
+                companyName: company.name,
+                deletedJobs: jobIds.length,
+                deletedInternships: internshipIds.length,
+            },
+        });
 
         return res.status(200).json({ message: "Company and related listings deleted.", success: true });
     } catch (error) {
@@ -360,9 +443,12 @@ export const deleteCompany = async (req, res) => {
 // ============ JOBS ============
 export const listJobs = async (req, res) => {
     try {
-        const { q } = req.query;
+        const { q, status } = req.query;
         const filter = {};
         if (q) filter.title = { $regex: q, $options: "i" };
+        if (status && ["open", "closed", "archived"].includes(String(status))) {
+            filter.status = String(status);
+        }
         const jobs = await Job.find(filter)
             .populate({ path: "company", select: "name verified" })
             .populate({ path: "created_by", select: "fullname email" })
@@ -376,10 +462,109 @@ export const listJobs = async (req, res) => {
 
 export const deleteJob = async (req, res) => {
     try {
-        const job = await Job.findByIdAndDelete(req.params.id);
+        const job = await Job.findByIdAndDelete(req.params.id).select("title company");
         if (!job) return res.status(404).json({ message: "Job not found.", success: false });
         await Application.deleteMany({ job: req.params.id });
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "job.deleted",
+            entityType: "Job",
+            entityId: job._id,
+            metadata: { jobTitle: job.title },
+        });
         return res.status(200).json({ message: "Job deleted.", success: true });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
+export const updateJobLifecycle = async (req, res) => {
+    try {
+        const { status } = req.body || {};
+        if (!["open", "closed", "archived"].includes(String(status))) {
+            return res.status(400).json({ message: "Invalid status.", success: false });
+        }
+
+        const job = await Job.findById(req.params.id).select("title status closedAt archivedAt");
+        if (!job) return res.status(404).json({ message: "Job not found.", success: false });
+
+        const previousStatus = job.status;
+        job.status = status;
+        if (status === "closed") {
+            job.closedAt = new Date();
+            job.archivedAt = undefined;
+        } else if (status === "archived") {
+            job.archivedAt = new Date();
+            if (!job.closedAt) job.closedAt = new Date();
+        } else {
+            job.closedAt = undefined;
+            job.archivedAt = undefined;
+        }
+        await job.save();
+
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "job.lifecycle_updated",
+            entityType: "Job",
+            entityId: job._id,
+            metadata: { jobTitle: job.title, previousStatus, nextStatus: status },
+        });
+
+        return res.status(200).json({
+            message: `Job moved to ${status}.`,
+            job,
+            success: true,
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
+export const listAuditLogs = async (req, res) => {
+    try {
+        const { action, entityType, q, page = 1, limit = 25 } = req.query;
+        const numericPage = Math.max(1, Number(page) || 1);
+        const numericLimit = Math.min(100, Math.max(1, Number(limit) || 25));
+
+        const filter = {};
+        if (action) filter.action = String(action);
+        if (entityType) filter.entityType = String(entityType);
+        if (q) {
+            filter.$or = [
+                { action: { $regex: q, $options: "i" } },
+                { entityType: { $regex: q, $options: "i" } },
+                { entityId: { $regex: q, $options: "i" } },
+                { "metadata.companyName": { $regex: q, $options: "i" } },
+                { "metadata.targetEmail": { $regex: q, $options: "i" } },
+                { "metadata.jobTitle": { $regex: q, $options: "i" } },
+            ];
+        }
+
+        const [logs, total] = await Promise.all([
+            AuditLog.find(filter)
+                .populate({ path: "actor", select: "fullname email role" })
+                .sort({ createdAt: -1 })
+                .skip((numericPage - 1) * numericLimit)
+                .limit(numericLimit),
+            AuditLog.countDocuments(filter),
+        ]);
+
+        return res.status(200).json({
+            logs,
+            pagination: {
+                page: numericPage,
+                limit: numericLimit,
+                total,
+                totalPages: Math.ceil(total / numericLimit),
+            },
+            success: true,
+        });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Server error", success: false });
@@ -405,9 +590,18 @@ export const listInternships = async (req, res) => {
 
 export const deleteInternship = async (req, res) => {
     try {
-        const internship = await Internship.findByIdAndDelete(req.params.id);
+        const internship = await Internship.findByIdAndDelete(req.params.id).select("title company");
         if (!internship) return res.status(404).json({ message: "Internship not found.", success: false });
         await InternshipApplication.deleteMany({ internship: req.params.id });
+        await recordAuditLog({
+            req,
+            actorId: req.user._id,
+            actorRole: req.user.role,
+            action: "internship.deleted",
+            entityType: "Internship",
+            entityId: internship._id,
+            metadata: { internshipTitle: internship.title },
+        });
         return res.status(200).json({ message: "Internship deleted.", success: true });
     } catch (error) {
         console.log(error);

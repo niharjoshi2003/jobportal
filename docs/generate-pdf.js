@@ -389,7 +389,7 @@ code([
     "{",
     "  \"fullname\":     \"Jane Doe\",",
     "  \"email\":        \"jane@example.com\",",
-    "  \"phoneNumber\":  \"9876543210\",",
+    "  \"phoneNumber\":  \"9000000000\",",
     "  \"password\":     \"********\",",
     "  \"role\":         \"admin\",",
     "  \"adminCode\":    \"<value of ADMIN_SIGNUP_CODE>\"",

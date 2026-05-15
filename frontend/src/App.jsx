@@ -2,6 +2,8 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Login from './components/auth/Login';
 import StaffLogin from './components/auth/StaffLogin';
 import Signup from './components/auth/Signup';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import LandingPage from './components/LandingPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import DashboardHome from './components/dashboard/DashboardHome';
@@ -33,6 +35,7 @@ import LegalPage from './components/legal/LegalPage';
 import AdminAllCompanies from './components/admin/superadmin/AdminAllCompanies';
 import AdminAllJobs from './components/admin/superadmin/AdminAllJobs';
 import AdminAllInternships from './components/admin/superadmin/AdminAllInternships';
+import AdminAuditLogs from './components/admin/superadmin/AdminAuditLogs';
 
 const appRouter = createBrowserRouter([
     {
@@ -50,6 +53,14 @@ const appRouter = createBrowserRouter([
     {
         path: '/signup',
         element: <Signup />
+    },
+    {
+        path: '/forgot-password',
+        element: <ForgotPassword />
+    },
+    {
+        path: '/reset-password',
+        element: <ResetPassword />
     },
     {
         path: '/privacy',
@@ -143,6 +154,10 @@ const appRouter = createBrowserRouter([
     {
         path: '/admin/all-internships',
         element: <ProtectedRoute roles={['admin']}><AdminAllInternships /></ProtectedRoute>
+    },
+    {
+        path: '/admin/audit-logs',
+        element: <ProtectedRoute roles={['admin']}><AdminAuditLogs /></ProtectedRoute>
     },
 ]);
 

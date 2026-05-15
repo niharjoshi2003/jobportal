@@ -1,7 +1,10 @@
+import { logger } from "../utils/logger.js";
+
 export const notFound = (req, res, _next) => {
     res.status(404).json({
         success: false,
         message: `Route not found: ${req.method} ${req.originalUrl}`,
+        requestId: req.requestId,
     });
 };
 
@@ -11,13 +14,20 @@ export const errorHandler = (err, req, res, _next) => {
     const message = err.message || "Internal server error";
 
     if (process.env.NODE_ENV !== "test") {
-        console.error(`[error] ${req.method} ${req.originalUrl} -> ${status}: ${message}`);
-        if (status >= 500) console.error(err.stack);
+        logger.error("request_failed", {
+            requestId: req.requestId || null,
+            method: req.method,
+            path: req.originalUrl,
+            status,
+            message,
+            stack: status >= 500 ? err.stack : undefined,
+        });
     }
 
     res.status(status).json({
         success: false,
         message,
+        requestId: req.requestId,
         ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
     });
 };

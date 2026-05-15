@@ -26,7 +26,7 @@ async function seed() {
             student = await User.create({
                 fullname: "Nihar Joshi",
                 email: "student@jobohire.com",
-                phoneNumber: 9876543210,
+                phoneNumber: 9000000000,
                 password: hashedPassword,
                 role: "student",
                 gender: "Male",
@@ -55,7 +55,7 @@ async function seed() {
             recruiter = await User.create({
                 fullname: "Admin Recruiter",
                 email: "recruiter@jobohire.com",
-                phoneNumber: 9876543211,
+                phoneNumber: 9000000001,
                 password: hashedPassword,
                 role: "recruiter",
                 profile: {

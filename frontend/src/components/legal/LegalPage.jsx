@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import PrivacyContent from './PrivacyContent';
-import logo from '@/assets/logo.png';
+import BrandLogo from '../shared/BrandLogo';
 
 const LegalPage = () => {
     return (
@@ -10,7 +10,7 @@ const LegalPage = () => {
             <div className="border-b border-border bg-card/40 backdrop-blur sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2">
-                        <img src={logo} alt="Job-O-Hire" className="h-8 w-auto" />
+                        <BrandLogo size="sm" />
                     </Link>
                     <Link to="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
                         <ArrowLeft size={16} /> Back home

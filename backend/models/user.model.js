@@ -100,7 +100,14 @@ const userSchema = new mongoose.Schema({
         read: { type: Boolean, default: false },
         link: { type: String },
         createdAt: { type: Date, default: Date.now }
-    }]
+    }],
+    passwordResetTokenHash: {
+        type: String,
+        default: ""
+    },
+    passwordResetExpiresAt: {
+        type: Date
+    }
 }, { timestamps: true });
 
 userSchema.methods.calculateProfileCompletion = function () {

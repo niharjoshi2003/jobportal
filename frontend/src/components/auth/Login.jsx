@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setLoading, setUser } from '@/redux/authSlice';
 import { Loader2, GraduationCap, Briefcase } from 'lucide-react';
 import { USER_API_END_POINT } from '@/utils/constant';
-import logo from '@/assets/logo.png';
+import BrandLogo from '../shared/BrandLogo';
 
 // Student-only login. Admin / Recruiter login lives at /portal-login.
 const Login = () => {
@@ -65,9 +65,8 @@ const Login = () => {
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
                     <Link to="/" className="inline-flex items-center gap-2">
-                        <img src={logo} alt="Job-O-Hire" className="h-12 w-auto" />
+                        <BrandLogo size="lg" showTagline />
                     </Link>
-                    <p className="text-sm text-muted-foreground mt-2">Unlocking Latent Talent</p>
                 </div>
 
                 <div className="glass-card rounded-2xl p-6">
@@ -93,6 +92,11 @@ const Login = () => {
                             <Input type="password" value={input.password} name="password" onChange={changeEventHandler}
                                 placeholder="Your password"
                                 className="mt-1 bg-white/5 border-border text-foreground" />
+                            <div className="text-right mt-1">
+                                <Link to="/forgot-password?role=student" className="text-xs text-primary hover:underline">
+                                    Forgot password?
+                                </Link>
+                            </div>
                         </div>
 
                         {loading ? (

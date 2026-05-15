@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Trash2, ShieldCheck, Plus, Briefcase } from 'lucide-react';
+import { Search, Trash2, ShieldCheck, Plus, Briefcase, Archive, PauseCircle, PlayCircle } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
@@ -11,12 +11,14 @@ const AdminAllJobs = () => {
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [q, setQ] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
 
-    const fetchJobs = async () => {
+    const fetchJobs = useCallback(async () => {
         try {
             setLoading(true);
             const params = new URLSearchParams();
             if (q) params.set('q', q);
+            if (statusFilter !== 'all') params.set('status', statusFilter);
             const res = await axios.get(`${ADMIN_API_END_POINT}/jobs?${params}`, { withCredentials: true });
             if (res.data.success) setJobs(res.data.jobs);
         } catch (e) {
@@ -24,9 +26,9 @@ const AdminAllJobs = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [q, statusFilter]);
 
-    useEffect(() => { fetchJobs(); /* eslint-disable-next-line */ }, []);
+    useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
     const deleteJob = async (id, title) => {
         if (!window.confirm(`Delete job "${title}"? Its applications will be removed too.`)) return;
@@ -39,6 +41,28 @@ const AdminAllJobs = () => {
         } catch (e) {
             toast.error(e.response?.data?.message || 'Failed to delete');
         }
+    };
+
+    const updateLifecycle = async (id, status) => {
+        try {
+            const res = await axios.patch(
+                `${ADMIN_API_END_POINT}/jobs/${id}/lifecycle`,
+                { status },
+                { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+            );
+            if (res.data?.success) {
+                toast.success(res.data.message);
+                fetchJobs();
+            }
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Failed to update job status');
+        }
+    };
+
+    const statusBadge = (status) => {
+        if (status === 'archived') return 'bg-slate-500/20 text-slate-300';
+        if (status === 'closed') return 'bg-yellow-500/20 text-yellow-300';
+        return 'bg-green-500/20 text-green-300';
     };
 
     return (
@@ -66,6 +90,16 @@ const AdminAllJobs = () => {
                         className="bg-transparent text-sm text-foreground outline-none w-full"
                     />
                 </form>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
+                >
+                    <option value="all">All statuses</option>
+                    <option value="open">Open</option>
+                    <option value="closed">Closed</option>
+                    <option value="archived">Archived</option>
+                </select>
                 <span className="text-sm text-muted-foreground">{jobs.length} jobs</span>
             </div>
 
@@ -76,6 +110,7 @@ const AdminAllJobs = () => {
                             <TableHead>Title</TableHead>
                             <TableHead>Company</TableHead>
                             <TableHead>Posted by</TableHead>
+                                <TableHead>Status</TableHead>
                             <TableHead>Location</TableHead>
                             <TableHead>Salary</TableHead>
                             <TableHead>Created</TableHead>
@@ -84,10 +119,10 @@ const AdminAllJobs = () => {
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
                         ) : jobs.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center py-10">
+                                <TableCell colSpan={8} className="text-center py-10">
                                     <div className="flex flex-col items-center gap-3">
                                         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                                             <Briefcase size={20} className="text-primary" />
@@ -119,17 +154,51 @@ const AdminAllJobs = () => {
                                 <TableCell className="text-muted-foreground text-sm">
                                     {j.created_by?.fullname || '-'}
                                 </TableCell>
+                                <TableCell>
+                                    <span className={`text-xs px-2 py-1 rounded-md capitalize ${statusBadge(j.status)}`}>
+                                        {j.status || 'open'}
+                                    </span>
+                                </TableCell>
                                 <TableCell className="text-muted-foreground">{j.location}</TableCell>
                                 <TableCell className="text-muted-foreground">{j.salary} LPA</TableCell>
                                 <TableCell className="text-muted-foreground">{j.createdAt?.split('T')[0]}</TableCell>
                                 <TableCell className="text-right">
-                                    <button
-                                        onClick={() => deleteJob(j._id, j.title)}
-                                        className="p-1.5 rounded-md hover:bg-red-500/10 text-red-400"
-                                        title="Delete job"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
+                                    <div className="inline-flex items-center gap-1">
+                                        {j.status !== 'open' && (
+                                            <button
+                                                onClick={() => updateLifecycle(j._id, 'open')}
+                                                className="p-1.5 rounded-md hover:bg-green-500/10 text-green-400"
+                                                title="Re-open job"
+                                            >
+                                                <PlayCircle size={14} />
+                                            </button>
+                                        )}
+                                        {j.status === 'open' && (
+                                            <button
+                                                onClick={() => updateLifecycle(j._id, 'closed')}
+                                                className="p-1.5 rounded-md hover:bg-yellow-500/10 text-yellow-300"
+                                                title="Close job"
+                                            >
+                                                <PauseCircle size={14} />
+                                            </button>
+                                        )}
+                                        {j.status !== 'archived' && (
+                                            <button
+                                                onClick={() => updateLifecycle(j._id, 'archived')}
+                                                className="p-1.5 rounded-md hover:bg-slate-500/10 text-slate-300"
+                                                title="Archive job"
+                                            >
+                                                <Archive size={14} />
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => deleteJob(j._id, j.title)}
+                                            className="p-1.5 rounded-md hover:bg-red-500/10 text-red-400"
+                                            title="Delete job"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}

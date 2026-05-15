@@ -7,7 +7,8 @@ import {
     approveStudent, rejectStudent,
     listCompanies, setCompanyVerified, deleteCompany,
     createCompanyWithRecruiter, resetRecruiterPassword,
-    listJobs, deleteJob,
+    listJobs, deleteJob, updateJobLifecycle,
+    listAuditLogs,
     listInternships, deleteInternship,
 } from "../controllers/admin.controller.js";
 
@@ -30,7 +31,10 @@ router.patch("/companies/:id/verify", setCompanyVerified);
 router.delete("/companies/:id", deleteCompany);
 
 router.get("/jobs", listJobs);
+router.patch("/jobs/:id/lifecycle", updateJobLifecycle);
 router.delete("/jobs/:id", deleteJob);
+
+router.get("/audit-logs", listAuditLogs);
 
 router.get("/internships", listInternships);
 router.delete("/internships/:id", deleteInternship);

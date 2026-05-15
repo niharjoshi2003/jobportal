@@ -8,6 +8,7 @@ export const applyJob = async (req, res) => {
     try {
         const userId = req.id;
         const jobId = req.params.id;
+        const incomingAnswers = Array.isArray(req.body?.answers) ? req.body.answers : [];
         if (!jobId) {
             return res.status(400).json({
                 message: "Job id is required.",
@@ -32,10 +33,95 @@ export const applyJob = async (req, res) => {
                 success: false
             })
         }
+        if (job.status && job.status !== "open") {
+            return res.status(400).json({
+                message: "This job is not accepting applications right now.",
+                success: false
+            });
+        }
+
+        if (job.deadline && new Date(job.deadline) < new Date()) {
+            return res.status(400).json({
+                message: "Application deadline has passed for this job.",
+                success: false
+            });
+        }
+
+        const totalApplications = await Application.countDocuments({ job: jobId });
+        if (typeof job.position === "number" && job.position > 0 && totalApplications >= job.position) {
+            return res.status(400).json({
+                message: "This job has reached the maximum number of applications.",
+                success: false
+            });
+        }
+
+        const answersMap = new Map(
+            incomingAnswers.map((entry) => [
+                String(entry?.questionId || ""),
+                String(entry?.answer || "").trim()
+            ])
+        );
+
+        const applicationAnswers = [];
+        for (const question of job.applicationQuestions || []) {
+            const questionId = String(question._id);
+            const answer = answersMap.get(questionId) || "";
+            const isRequired = question.required !== false;
+
+            if (isRequired && !answer) {
+                return res.status(400).json({
+                    message: `Please answer: ${question.question}`,
+                    success: false
+                });
+            }
+
+            if (!answer) continue;
+
+            if (answer.length > 1000) {
+                return res.status(400).json({
+                    message: `Answer is too long for "${question.question}".`,
+                    success: false
+                });
+            }
+
+            if (question.type === "yes_no") {
+                const normalized = answer.toLowerCase();
+                if (!["yes", "no"].includes(normalized)) {
+                    return res.status(400).json({
+                        message: `Invalid answer for "${question.question}".`,
+                        success: false
+                    });
+                }
+                applicationAnswers.push({
+                    questionId: question._id,
+                    question: question.question,
+                    answer: normalized
+                });
+                continue;
+            }
+
+            if (question.type === "multiple_choice") {
+                const validOptions = (question.options || []).map((opt) => String(opt || "").trim());
+                if (!validOptions.includes(answer)) {
+                    return res.status(400).json({
+                        message: `Invalid option selected for "${question.question}".`,
+                        success: false
+                    });
+                }
+            }
+
+            applicationAnswers.push({
+                questionId: question._id,
+                question: question.question,
+                answer
+            });
+        }
+
         // create a new application
         const newApplication = await Application.create({
             job:jobId,
             applicant:userId,
+            applicationAnswers,
         });
 
         job.applications.push(newApplication._id);

@@ -9,6 +9,7 @@ import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
+import BrandLogo from './BrandLogo';
 
 const Navbar = () => {
     const { user } = useSelector(store => store.auth);
@@ -30,10 +31,7 @@ const Navbar = () => {
         <div className="bg-card border-b border-border">
             <div className="flex items-center justify-between mx-auto max-w-7xl h-16 px-4">
                 <Link to={(user?.role === 'recruiter' || user?.role === 'admin') ? '/admin/companies' : '/dashboard'} className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg gradient-border flex items-center justify-center">
-                        <span className="text-white font-bold text-[10px]">JOH</span>
-                    </div>
-                    <span className="text-lg font-bold text-foreground tracking-tight">Job-O-Hire</span>
+                    <BrandLogo size="sm" />
                 </Link>
 
                 <div className="flex items-center gap-8">

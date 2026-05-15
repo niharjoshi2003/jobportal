@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -116,6 +116,12 @@ const RecruiterApplicants = () => {
                 {
                     label: 'Applied Date',
                     value: (a) => (a.createdAt ? new Date(a.createdAt).toISOString().split('T')[0] : ''),
+                },
+                {
+                    label: 'Custom Responses',
+                    value: (a) => (a.applicationAnswers || [])
+                        .map((ans) => `${ans.question}: ${ans.answer}`)
+                        .join(' | '),
                 },
                 { label: 'Resume URL', value: (a) => a.applicant?.profile?.resume || '' },
             ];
