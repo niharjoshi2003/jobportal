@@ -13,6 +13,7 @@ const { app } = await import("../app.js");
 const { User } = await import("../models/user.model.js");
 const { Company } = await import("../models/company.model.js");
 const { Job } = await import("../models/job.model.js");
+const { Application } = await import("../models/application.model.js");
 
 let mongoServer;
 
@@ -178,5 +179,93 @@ test("job lifecycle controls and apply limits are enforced", async () => {
     assert.equal(jobDoc.applications.length, 1);
     assert.equal(String(jobDoc.created_by), String(admin._id));
     assert.equal(String(student._id).length > 0, true);
+});
+
+test("external apply click creates pending record and avoids duplicates", async () => {
+    const adminPassword = await bcrypt.hash("AdminPass456", 10);
+    const studentPassword = await bcrypt.hash("StudPass789", 10);
+
+    const admin = await User.create({
+        fullname: "Admin External",
+        email: "admin.external@example.com",
+        phoneNumber: 7234512345,
+        password: adminPassword,
+        role: "admin",
+    });
+
+    const student = await User.create({
+        fullname: "Student External",
+        email: "student.external@example.com",
+        phoneNumber: 6234512345,
+        password: studentPassword,
+        role: "student",
+        status: "approved",
+        college: "Test College",
+        rollNumber: "EXT001",
+    });
+
+    const company = await Company.create({
+        name: "External Apply Corp",
+        userId: admin._id,
+        description: "External apply testing company",
+    });
+
+    const adminAgent = request.agent(app);
+    const studentAgent = request.agent(app);
+
+    await adminAgent.post("/api/v1/user/login").send({
+        email: "admin.external@example.com",
+        password: "AdminPass456",
+        role: "admin",
+    }).expect(200);
+
+    await studentAgent.post("/api/v1/user/login").send({
+        email: "student.external@example.com",
+        password: "StudPass789",
+        role: "student",
+    }).expect(200);
+
+    const postJobRes = await adminAgent.post("/api/v1/job/post").send({
+        title: "External Frontend Engineer",
+        description: "External apply role",
+        requirements: "React, TypeScript",
+        salary: 12,
+        location: "Remote",
+        jobType: "Full Time",
+        experience: 2,
+        position: 20,
+        deadline: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        companyOverview: "Company overview",
+        jobRequirementsDetail: "Detailed requirements",
+        additionalInfo: "Additional information",
+        companyId: company._id.toString(),
+        applicationMode: "external",
+        externalApplyUrl: "https://example.com/careers/apply/external-frontend-engineer",
+    }).expect(201);
+
+    const jobId = postJobRes.body.job._id;
+    assert.ok(jobId);
+    assert.equal(postJobRes.body.job.applicationMode, "external");
+
+    const firstClickRes = await studentAgent.post(`/api/v1/application/apply/${jobId}`).send({}).expect(201);
+    assert.equal(firstClickRes.body.success, true);
+    assert.match(firstClickRes.body.message, /click recorded/i);
+    assert.equal(firstClickRes.body.redirectUrl, "https://example.com/careers/apply/external-frontend-engineer");
+
+    const createdApplication = await Application.findOne({ job: jobId, applicant: student._id });
+    assert.ok(createdApplication, "Expected external application record");
+    assert.equal(createdApplication.status, "pending");
+    assert.equal(createdApplication.applicationSource, "external");
+    assert.ok(createdApplication.externalApplyClickAt, "Expected external click timestamp");
+
+    const secondClickRes = await studentAgent.post(`/api/v1/application/apply/${jobId}`).send({}).expect(200);
+    assert.equal(secondClickRes.body.success, true);
+    assert.match(secondClickRes.body.message, /already recorded/i);
+
+    const totalApplications = await Application.countDocuments({ job: jobId, applicant: student._id });
+    assert.equal(totalApplications, 1);
+
+    const jobDoc = await Job.findById(jobId);
+    assert.equal(jobDoc.applications.length, 1);
 });
 

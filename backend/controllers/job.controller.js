@@ -38,6 +38,22 @@ const sanitizeApplicationQuestions = (questions) => {
         .filter(Boolean);
 };
 
+const normalizeApplicationMode = (mode) => {
+    const normalized = String(mode || "internal").trim().toLowerCase();
+    return normalized === "external" ? "external" : "internal";
+};
+
+const normalizeExternalApplyUrl = (value) => String(value || "").trim();
+
+const isValidExternalUrl = (value) => {
+    try {
+        const parsed = new URL(value);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch (_error) {
+        return false;
+    }
+};
+
 // admin post krega job
 export const postJob = async (req, res) => {
     try {
@@ -55,7 +71,9 @@ export const postJob = async (req, res) => {
             companyOverview,
             jobRequirementsDetail,
             additionalInfo,
-            applicationQuestions
+            applicationQuestions,
+            applicationMode,
+            externalApplyUrl
         } = req.body;
         const userId = req.id;
 
@@ -76,6 +94,24 @@ export const postJob = async (req, res) => {
                 message: "Something is missing. Salary/experience must be non-negative and position must be greater than 0.",
                 success: false
             });
+        }
+
+        const normalizedApplicationMode = normalizeApplicationMode(applicationMode);
+        const normalizedExternalApplyUrl = normalizeExternalApplyUrl(externalApplyUrl);
+
+        if (normalizedApplicationMode === "external") {
+            if (!normalizedExternalApplyUrl) {
+                return res.status(400).json({
+                    message: "External application URL is required when application mode is external.",
+                    success: false
+                });
+            }
+            if (!isValidExternalUrl(normalizedExternalApplyUrl)) {
+                return res.status(400).json({
+                    message: "Please provide a valid external application URL (http/https).",
+                    success: false
+                });
+            }
         }
 
         let parsedDeadline = null;
@@ -119,7 +155,9 @@ export const postJob = async (req, res) => {
             companyOverview: String(companyOverview).trim(),
             jobRequirementsDetail: String(jobRequirementsDetail).trim(),
             additionalInfo: String(additionalInfo).trim(),
-            applicationQuestions: sanitizedQuestions,
+            applicationQuestions: normalizedApplicationMode === "external" ? [] : sanitizedQuestions,
+            applicationMode: normalizedApplicationMode,
+            externalApplyUrl: normalizedApplicationMode === "external" ? normalizedExternalApplyUrl : "",
             company: companyId,
             created_by: userId
         });

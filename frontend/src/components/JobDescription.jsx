@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Clock, Users, Calendar, DollarSign, Share2, Bookmark, BookmarkCheck } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Users, Calendar, DollarSign, Share2, Bookmark, BookmarkCheck, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 import { APPLICATION_API_END_POINT, JOB_API_END_POINT, BOOKMARK_API_END_POINT } from '@/utils/constant';
 import { setSingleJob } from '@/redux/jobSlice';
@@ -30,6 +30,7 @@ const JobDescription = () => {
     const isBookmarked = user?.bookmarkedJobs?.includes(singleJob?._id);
     const isStudent = user?.role === 'student';
     const applicationQuestions = singleJob?.applicationQuestions || [];
+    const isExternalApply = singleJob?.applicationMode === "external" && !!singleJob?.externalApplyUrl;
     const openingsLeft = Math.max(
         0,
         Number(singleJob?.position || 0) - Number(singleJob?.applications?.length || 0)
@@ -86,6 +87,39 @@ const JobDescription = () => {
 
     const handleAnswerChange = (questionId, value) => {
         setQuestionAnswers((prev) => ({ ...prev, [questionId]: value }));
+    };
+
+    const handleExternalApply = async () => {
+        if (!singleJob?.externalApplyUrl) {
+            toast.error("External application link is unavailable.");
+            return;
+        }
+        try {
+            const res = await axios.post(
+                `${APPLICATION_API_END_POINT}/apply/${jobId}`,
+                {},
+                {
+                    withCredentials: true,
+                    headers: { 'Content-Type': 'application/json' },
+                }
+            );
+
+            if (res.data?.success) {
+                if (!computeIsApplied(singleJob, user?._id)) {
+                    const updatedSingleJob = {
+                        ...singleJob,
+                        applications: [...(singleJob?.applications || []), { applicant: user?._id }]
+                    };
+                    dispatch(setSingleJob(updatedSingleJob));
+                }
+                setIsApplied(true);
+                const redirectUrl = res.data.redirectUrl || singleJob.externalApplyUrl;
+                window.open(redirectUrl, "_blank", "noopener,noreferrer");
+                toast.success(res.data.message || "Opening company application page...");
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Unable to continue to company site.");
+        }
     };
 
     const handleBookmark = async () => {
@@ -146,11 +180,17 @@ const JobDescription = () => {
                         </button>
                         {isStudent && (
                             <Button
-                                onClick={isApplied ? null : applyJobHandler}
-                                disabled={isApplied || isApplicationClosed}
-                                className={`px-6 ${isApplied ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary hover:bg-primary/90 text-white'}`}
+                                onClick={
+                                    isExternalApply
+                                        ? handleExternalApply
+                                        : (isApplied ? null : applyJobHandler)
+                                }
+                                disabled={isExternalApply ? isApplicationClosed : (isApplied || isApplicationClosed)}
+                                className={`px-6 ${(!isExternalApply && isApplied) ? 'bg-muted text-muted-foreground cursor-not-allowed' : 'bg-primary hover:bg-primary/90 text-white'}`}
                             >
-                                {isApplied ? 'Already Applied' : isApplicationClosed ? 'Applications Closed' : 'Apply Now'}
+                                {isExternalApply
+                                    ? (isApplicationClosed ? 'Applications Closed' : (isApplied ? 'Continue on Company Site' : 'Apply on Company Site'))
+                                    : (isApplied ? 'Already Applied' : isApplicationClosed ? 'Applications Closed' : 'Apply Now')}
                             </Button>
                         )}
                     </div>
@@ -185,6 +225,25 @@ const JobDescription = () => {
                         <span className="text-sm font-medium text-foreground w-32 flex-shrink-0">Status:</span>
                         <span className="text-sm text-muted-foreground capitalize">{singleJob?.status || "open"}</span>
                     </div>
+                    <div className="flex items-start gap-3">
+                        <span className="text-sm font-medium text-foreground w-32 flex-shrink-0">Apply Method:</span>
+                        <span className="text-sm text-muted-foreground">
+                            {singleJob?.applicationMode === "external" ? "Company website" : "Job-O-Hire"}
+                        </span>
+                    </div>
+                    {isExternalApply && (
+                        <div className="flex items-start gap-3">
+                            <span className="text-sm font-medium text-foreground w-32 flex-shrink-0">Apply Link:</span>
+                            <a
+                                href={singleJob.externalApplyUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                            >
+                                Open company application page <ExternalLink size={13} />
+                            </a>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -225,7 +284,7 @@ const JobDescription = () => {
                 </div>
             </div>
 
-            {isStudent && !isApplied && !isApplicationClosed && applicationQuestions.length > 0 && (
+            {isStudent && !isExternalApply && !isApplied && !isApplicationClosed && applicationQuestions.length > 0 && (
                 <div className="glass-card rounded-xl p-6 mt-6">
                     <h2 className="text-lg font-semibold text-foreground mb-1">Application Questions</h2>
                     <p className="text-xs text-muted-foreground mb-4">

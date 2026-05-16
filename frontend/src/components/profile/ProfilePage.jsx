@@ -47,6 +47,7 @@ const ProfilePage = () => {
     const [resumeUploadOpen, setResumeUploadOpen] = useState(false);
     const [linksEditOpen, setLinksEditOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [resumeUploading, setResumeUploading] = useState(false);
     const [customSkillInput, setCustomSkillInput] = useState('');
 
     const [editForm, setEditForm] = useState({
@@ -145,11 +146,12 @@ const ProfilePage = () => {
     const handleResumeUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 1024 * 1024) {
-            toast.error('File must be less than 1MB');
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('File must be less than 5MB');
             return;
         }
         try {
+            setResumeUploading(true);
             const formData = new FormData();
             formData.append('file', file);
             formData.append('resumeType', 'master');
@@ -166,7 +168,9 @@ const ProfilePage = () => {
                 setResumeUploadOpen(false);
             }
         } catch (error) {
-            toast.error('Failed to upload resume');
+            toast.error(error.response?.data?.message || 'Failed to upload resume');
+        } finally {
+            setResumeUploading(false);
         }
     };
 
@@ -452,12 +456,21 @@ const ProfilePage = () => {
                 <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
                     <DialogHeader><DialogTitle>Upload Resume</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
-                        <p className="text-sm text-muted-foreground">Upload a PDF file (max 1MB). Your Master Resume is used for all recommendations.</p>
-                        <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+                        <p className="text-sm text-muted-foreground">Upload a PDF, DOC, or DOCX file (max 5MB). Your Master Resume is used for all recommendations.</p>
+                        <label className={`flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-xl transition-colors ${resumeUploading ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50'}`}>
                             <Upload size={32} className="text-muted-foreground mb-2" />
-                            <span className="text-sm text-muted-foreground">Click to upload PDF</span>
-                            <input type="file" accept="application/pdf" onChange={handleResumeUpload} className="hidden" />
+                            <span className="text-sm text-muted-foreground">
+                                {resumeUploading ? 'Please wait, resume is uploading...' : 'Click to upload resume'}
+                            </span>
+                            <input
+                                type="file"
+                                accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                onChange={handleResumeUpload}
+                                disabled={resumeUploading}
+                                className="hidden"
+                            />
                         </label>
+                        {resumeUploading && <p className="text-xs text-muted-foreground">Please wait while we upload your resume.</p>}
                     </div>
                 </DialogContent>
             </Dialog>

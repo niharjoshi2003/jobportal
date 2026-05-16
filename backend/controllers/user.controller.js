@@ -2,10 +2,84 @@ import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import getDataUri from "../utils/datauri.js";
-import cloudinary from "../utils/cloudinary.js";
+import { uploadBufferToCloudinary } from "../utils/cloudinary.js";
+import { saveFileLocally, toPublicFileUrl } from "../utils/fileStorage.js";
 import { sendEmail } from "../utils/mailer.js";
 import { logger } from "../utils/logger.js";
+
+const MAX_PROFILE_PHOTO_BYTES = 2 * 1024 * 1024;
+const MAX_RESUME_BYTES = 5 * 1024 * 1024;
+const RESUME_ALLOWED_MIME_TYPES = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+const getResumeStorageMode = () =>
+    String(process.env.RESUME_STORAGE_MODE || "local").trim().toLowerCase();
+
+const isUploadValidationError = (message = "") =>
+    /(must be|only|allowed|smaller|missing|no file uploaded)/i.test(String(message));
+
+const validateResumeFile = (file) => {
+    if (!file) return "No file uploaded.";
+    if (!RESUME_ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+        return "Only PDF, DOC, and DOCX resumes are allowed.";
+    }
+    if (file.size > MAX_RESUME_BYTES) {
+        return "Resume must be 5MB or smaller.";
+    }
+    return null;
+};
+
+const uploadProfilePhotoFile = async (file) => {
+    if (!file?.mimetype?.startsWith("image/")) {
+        throw new Error("Profile photo must be an image.");
+    }
+    if (file.size > MAX_PROFILE_PHOTO_BYTES) {
+        throw new Error("Profile photo must be 2MB or smaller.");
+    }
+    const upload = await uploadBufferToCloudinary(file, {
+        folder: "job-o-hire/profile-photos",
+        resource_type: "image",
+    });
+    return upload.secure_url;
+};
+
+const uploadResumeFile = async (req, file) => {
+    const validationError = validateResumeFile(file);
+    if (validationError) throw new Error(validationError);
+
+    const mode = getResumeStorageMode();
+    if (mode === "local") {
+        const saved = await saveFileLocally(file, "resumes");
+        return toPublicFileUrl(req, saved.relativeUrlPath);
+    }
+
+    if (mode === "cloudinary") {
+        const upload = await uploadBufferToCloudinary(file, {
+            folder: "job-o-hire/resumes",
+            resource_type: "raw",
+        });
+        return upload.secure_url;
+    }
+
+    // auto mode: try cloudinary first, then local fallback
+    try {
+        const upload = await uploadBufferToCloudinary(file, {
+            folder: "job-o-hire/resumes",
+            resource_type: "raw",
+        });
+        return upload.secure_url;
+    } catch (error) {
+        logger.warn("resume_cloudinary_upload_failed_fallback_local", {
+            error: error?.message,
+            requestId: req?.requestId || null,
+        });
+        const saved = await saveFileLocally(file, "resumes");
+        return toPublicFileUrl(req, saved.relativeUrlPath);
+    }
+};
 
 export const register = async (req, res) => {
     try {
@@ -60,9 +134,11 @@ export const register = async (req, res) => {
         const file = req.file;
         let profilePhotoUrl = "";
         if (file) {
-            const fileUri = getDataUri(file);
-            const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-            profilePhotoUrl = cloudResponse.secure_url;
+            try {
+                profilePhotoUrl = await uploadProfilePhotoFile(file);
+            } catch (uploadError) {
+                return res.status(400).json({ message: uploadError.message, success: false });
+            }
         }
 
         const existingUser = await User.findOne({ email: normalizedEmail });
@@ -306,10 +382,16 @@ export const updateProfile = async (req, res) => {
         const { fullname, email, phoneNumber, bio, skills, gender, personalEmail, college, graduationYear, customSkills, externalLinks } = req.body;
 
         const file = req.file;
-        let cloudResponse = null;
+        let resumeUrl = null;
         if (file) {
-            const fileUri = getDataUri(file);
-            cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+            try {
+                resumeUrl = await uploadResumeFile(req, file);
+            } catch (uploadError) {
+                if (isUploadValidationError(uploadError?.message)) {
+                    return res.status(400).json({ message: uploadError.message, success: false });
+                }
+                throw uploadError;
+            }
         }
 
         let skillsArray;
@@ -345,8 +427,8 @@ export const updateProfile = async (req, res) => {
             } catch (e) { /* ignore parse errors */ }
         }
 
-        if (cloudResponse) {
-            user.profile.resume = cloudResponse.secure_url;
+        if (resumeUrl) {
+            user.profile.resume = resumeUrl;
             user.profile.resumeOriginalName = file.originalname;
         }
 
@@ -380,9 +462,15 @@ export const updateProfilePhoto = async (req, res) => {
         if (!file) {
             return res.status(400).json({ message: "No file uploaded.", success: false });
         }
-
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+        let profilePhotoUrl = "";
+        try {
+            profilePhotoUrl = await uploadProfilePhotoFile(file);
+        } catch (uploadError) {
+            if (isUploadValidationError(uploadError?.message)) {
+                return res.status(400).json({ message: uploadError.message, success: false });
+            }
+            throw uploadError;
+        }
 
         const userId = req.id;
         let user = await User.findById(userId);
@@ -390,13 +478,13 @@ export const updateProfilePhoto = async (req, res) => {
             return res.status(400).json({ message: "User not found.", success: false });
         }
 
-        user.profile.profilePhoto = cloudResponse.secure_url;
+        user.profile.profilePhoto = profilePhotoUrl;
         user.profile.profileCompletion = user.calculateProfileCompletion();
         await user.save();
 
         return res.status(200).json({
             message: "Profile photo updated.",
-            profilePhoto: cloudResponse.secure_url,
+            profilePhoto: profilePhotoUrl,
             profileCompletion: user.profile.profileCompletion,
             success: true
         });
@@ -411,12 +499,19 @@ export const addResume = async (req, res) => {
         const file = req.file;
         const { resumeType } = req.body;
 
-        if (!file) {
-            return res.status(400).json({ message: "No file uploaded.", success: false });
+        const validationError = validateResumeFile(file);
+        if (validationError) {
+            return res.status(400).json({ message: validationError, success: false });
         }
-
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+        let resumeUrl = "";
+        try {
+            resumeUrl = await uploadResumeFile(req, file);
+        } catch (uploadError) {
+            if (isUploadValidationError(uploadError?.message)) {
+                return res.status(400).json({ message: uploadError.message, success: false });
+            }
+            throw uploadError;
+        }
 
         const userId = req.id;
         let user = await User.findById(userId);
@@ -425,14 +520,14 @@ export const addResume = async (req, res) => {
         }
 
         const newResume = {
-            url: cloudResponse.secure_url,
+            url: resumeUrl,
             originalName: file.originalname,
             type: resumeType || 'domain',
             uploadedAt: new Date()
         };
 
         if (resumeType === 'master') {
-            user.profile.resume = cloudResponse.secure_url;
+            user.profile.resume = resumeUrl;
             user.profile.resumeOriginalName = file.originalname;
         }
 

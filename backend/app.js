@@ -5,6 +5,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import path from "path";
 
 import userRoute from "./routes/user.route.js";
 import companyRoute from "./routes/company.route.js";
@@ -77,6 +78,14 @@ app.use(
             return cb(new Error(`CORS blocked: ${origin}`));
         },
         credentials: true,
+    })
+);
+
+app.use(
+    "/uploads",
+    express.static(path.join(process.cwd(), "uploads"), {
+        maxAge: "1d",
+        etag: true,
     })
 );
 

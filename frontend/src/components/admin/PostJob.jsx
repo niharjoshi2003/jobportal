@@ -28,6 +28,8 @@ const PostJob = () => {
         companyOverview: "",
         jobRequirementsDetail: "",
         additionalInfo: "",
+        applicationMode: "internal",
+        externalApplyUrl: "",
         applicationQuestions: [],
         companyId: "",
         companyName: "",
@@ -104,6 +106,15 @@ const PostJob = () => {
         }));
     };
 
+    const updateApplicationMode = (mode) => {
+        setInput((prev) => ({
+            ...prev,
+            applicationMode: mode,
+            externalApplyUrl: mode === "external" ? prev.externalApplyUrl : "",
+            applicationQuestions: mode === "external" ? [] : prev.applicationQuestions,
+        }));
+    };
+
     const submitHandler = async (e) => {
         e.preventDefault();
         if (!input.title || !input.description || !input.requirements ||
@@ -129,6 +140,21 @@ const PostJob = () => {
             const selectedDeadline = new Date(input.deadline);
             if (selectedDeadline <= new Date()) {
                 toast.error('Deadline must be in the future.');
+                return;
+            }
+        }
+        if (input.applicationMode === "external") {
+            if (!input.externalApplyUrl.trim()) {
+                toast.error('External application URL is required for external apply mode.');
+                return;
+            }
+            try {
+                const parsed = new URL(input.externalApplyUrl.trim());
+                if (!['http:', 'https:'].includes(parsed.protocol)) {
+                    throw new Error('Invalid protocol');
+                }
+            } catch {
+                toast.error('Please enter a valid external URL (http/https).');
                 return;
             }
         }
@@ -171,6 +197,8 @@ const PostJob = () => {
             companyOverview: input.companyOverview,
             jobRequirementsDetail: input.jobRequirementsDetail,
             additionalInfo: input.additionalInfo,
+            applicationMode: input.applicationMode,
+            externalApplyUrl: input.applicationMode === "external" ? input.externalApplyUrl.trim() : "",
             applicationQuestions: normalizedQuestions,
             companyId: input.companyId,
         };
@@ -342,6 +370,30 @@ const PostJob = () => {
                                     placeholder="Perks, work model, process timeline, onboarding details, or any extra notes."
                                 />
                             </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Application Mode *</Label>
+                                    <select
+                                        value={input.applicationMode}
+                                        onChange={(e) => updateApplicationMode(e.target.value)}
+                                        className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                                    >
+                                        <option value="internal">Apply on Job-O-Hire</option>
+                                        <option value="external">Redirect to company site</option>
+                                    </select>
+                                </div>
+                                {input.applicationMode === "external" && (
+                                    <div>
+                                        <Label>External Apply URL *</Label>
+                                        <Input
+                                            name="externalApplyUrl"
+                                            value={input.externalApplyUrl}
+                                            onChange={changeEventHandler}
+                                            placeholder="https://company.com/careers/apply/123"
+                                        />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </section>
 
@@ -353,12 +405,22 @@ const PostJob = () => {
                                     Add custom questions for applicants. These answers are visible to recruiters/admins.
                                 </p>
                             </div>
-                            <Button type="button" variant="outline" onClick={addQuestion} className="inline-flex items-center gap-1.5">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={addQuestion}
+                                disabled={input.applicationMode === "external"}
+                                className="inline-flex items-center gap-1.5"
+                            >
                                 <Plus size={14} /> Add Question
                             </Button>
                         </div>
 
-                        {input.applicationQuestions.length === 0 ? (
+                        {input.applicationMode === "external" ? (
+                            <p className="text-xs text-muted-foreground">
+                                Custom questions are disabled for external apply mode because students apply on the company website.
+                            </p>
+                        ) : input.applicationQuestions.length === 0 ? (
                             <p className="text-xs text-muted-foreground">No custom question added yet. Applicants can still apply directly.</p>
                         ) : (
                             <div className="space-y-4">

@@ -78,6 +78,15 @@ const jobSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    applicationMode: {
+        type: String,
+        enum: ["internal", "external"],
+        default: "internal"
+    },
+    externalApplyUrl: {
+        type: String,
+        default: ""
+    },
     applicationQuestions: [applicationQuestionSchema],
     status: {
         type: String,

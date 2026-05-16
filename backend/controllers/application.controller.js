@@ -15,16 +15,6 @@ export const applyJob = async (req, res) => {
                 success: false
             })
         };
-        // check if the user has already applied for the job
-        const existingApplication = await Application.findOne({ job: jobId, applicant: userId });
-
-        if (existingApplication) {
-            return res.status(400).json({
-                message: "You have already applied for this jobs",
-                success: false
-            });
-        }
-
         // check if the jobs exists
         const job = await Job.findById(jobId);
         if (!job) {
@@ -33,6 +23,51 @@ export const applyJob = async (req, res) => {
                 success: false
             })
         }
+
+        // check if the user has already applied for the job
+        const existingApplication = await Application.findOne({ job: jobId, applicant: userId });
+
+        if (job.applicationMode === "external") {
+            if (!job.externalApplyUrl) {
+                return res.status(400).json({
+                    message: "External application URL is not configured for this job.",
+                    success: false
+                });
+            }
+
+            if (existingApplication) {
+                return res.status(200).json({
+                    message: "Application click already recorded. Continue on company site.",
+                    redirectUrl: job.externalApplyUrl,
+                    success: true
+                });
+            }
+
+            const newApplication = await Application.create({
+                job: jobId,
+                applicant: userId,
+                applicationSource: "external",
+                externalApplyClickAt: new Date(),
+                applicationAnswers: [],
+            });
+
+            job.applications.push(newApplication._id);
+            await job.save();
+
+            return res.status(201).json({
+                message: "Application click recorded. Continue on company site.",
+                redirectUrl: job.externalApplyUrl,
+                success: true
+            });
+        }
+
+        if (existingApplication) {
+            return res.status(400).json({
+                message: "You have already applied for this jobs",
+                success: false
+            });
+        }
+
         if (job.status && job.status !== "open") {
             return res.status(400).json({
                 message: "This job is not accepting applications right now.",
@@ -121,6 +156,7 @@ export const applyJob = async (req, res) => {
         const newApplication = await Application.create({
             job:jobId,
             applicant:userId,
+            applicationSource: "internal",
             applicationAnswers,
         });
 

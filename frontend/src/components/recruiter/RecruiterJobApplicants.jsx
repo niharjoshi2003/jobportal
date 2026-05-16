@@ -123,6 +123,11 @@ const RecruiterJobApplicants = () => {
             },
             { key: 'status', label: 'Status', value: (a) => a.status || '' },
             {
+                key: 'applicationSource',
+                label: 'Application Source',
+                value: (a) => (a.applicationSource === 'external' ? 'Company Site' : 'Job-O-Hire'),
+            },
+            {
                 key: 'appliedAt',
                 label: 'Applied Date',
                 value: (a) => (a.createdAt ? new Date(a.createdAt).toISOString().split('T')[0] : ''),
@@ -217,6 +222,7 @@ const RecruiterJobApplicants = () => {
                                         <th className="px-4 py-3 text-left">Roll No</th>
                                         <th className="px-4 py-3 text-left">Resume</th>
                                         <th className="px-4 py-3 text-left">Applied</th>
+                                        <th className="px-4 py-3 text-left">Source</th>
                                         <th className="px-4 py-3 text-left">Status</th>
                                         <th className="px-4 py-3 text-left">Actions</th>
                                     </tr>
@@ -253,6 +259,9 @@ const RecruiterJobApplicants = () => {
                                                 </td>
                                                 <td className="px-4 py-3 text-muted-foreground">
                                                     {new Date(app.createdAt).toLocaleDateString()}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground text-xs">
+                                                    {app.applicationSource === 'external' ? 'Company Site' : 'Job-O-Hire'}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className={`px-2 py-1 rounded-md text-xs border capitalize ${statusBadgeClass(app.status)}`}>

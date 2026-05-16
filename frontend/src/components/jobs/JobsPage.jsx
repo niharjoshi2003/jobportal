@@ -65,6 +65,11 @@ const JobCard = ({ job, isApplied, isBookmarked, onBookmarkToggle }) => {
                 )}
             </div>
             <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2">{job?.title}</h3>
+            {job?.applicationMode === 'external' && (
+                <Badge className="mb-2 bg-amber-500/15 text-amber-400 border-0 text-[10px]">
+                    External Apply
+                </Badge>
+            )}
             <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{job?.description}</p>
             <div className="flex flex-wrap items-center gap-2 mb-3">
                 {job?.jobType && (

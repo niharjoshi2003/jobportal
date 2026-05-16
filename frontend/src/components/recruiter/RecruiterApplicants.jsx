@@ -114,6 +114,10 @@ const RecruiterApplicants = () => {
                 },
                 { label: 'Status', value: (a) => a.status || '' },
                 {
+                    label: 'Application Source',
+                    value: (a) => (a.applicationSource === 'external' ? 'Company Site' : 'Job-O-Hire'),
+                },
+                {
                     label: 'Applied Date',
                     value: (a) => (a.createdAt ? new Date(a.createdAt).toISOString().split('T')[0] : ''),
                 },

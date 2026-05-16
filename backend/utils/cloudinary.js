@@ -17,4 +17,26 @@ cloudinary.config({
     api_secret: CLOUDINARY_API_SECRET,
 });
 
+export const uploadBufferToCloudinary = (file, options = {}) =>
+    new Promise((resolve, reject) => {
+        if (!file?.buffer) {
+            reject(new Error("Missing file buffer for upload."));
+            return;
+        }
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                folder: options.folder,
+                resource_type: options.resource_type || "auto",
+                use_filename: true,
+                unique_filename: true,
+                overwrite: false,
+            },
+            (error, result) => {
+                if (error) return reject(error);
+                return resolve(result);
+            }
+        );
+        uploadStream.end(file.buffer);
+    });
+
 export default cloudinary;

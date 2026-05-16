@@ -33,6 +33,14 @@ const applicationSchema = new mongoose.Schema({
         enum:['pending', 'shortlisted', 'accepted', 'rejected'],
         default:'pending'
     },
+    applicationSource: {
+        type: String,
+        enum: ["internal", "external"],
+        default: "internal"
+    },
+    externalApplyClickAt: {
+        type: Date
+    },
     applicationAnswers: [applicationAnswerSchema]
 },{timestamps:true});
 export const Application  = mongoose.model("Application", applicationSchema);
