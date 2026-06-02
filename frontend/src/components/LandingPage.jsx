@@ -281,7 +281,7 @@ const LandingPage = () => {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-10">
                             {[
                                 { value: 789, suffix: 'K+', label: t('stats.gap_label'), sub: t('stats.gap_sub') },
-                                { value: 200, suffix: '+', label: t('stats.institutions_label'), sub: t('stats.institutions_sub') },
+                                { value: 20, suffix: '+', label: t('stats.institutions_label'), sub: t('stats.institutions_sub') },
                                 { value: 50, suffix: '+', label: t('stats.companies_label'), sub: t('stats.companies_sub') },
                                 { value: 95, suffix: '%', label: t('stats.conversion_label'), sub: t('stats.conversion_sub') },
                             ].map((stat, i) => (
