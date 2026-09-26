@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
+import { clearSessionToken } from '@/utils/session';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
 import BrandLogo from '../shared/BrandLogo';
@@ -42,6 +43,7 @@ const Sidebar = () => {
         } catch (error) {
             // Backend offline, proceed with client-side logout
         }
+        clearSessionToken();
         dispatch(setUser(null));
         navigate("/login");
         toast.success("Logged out successfully.");

@@ -1,6 +1,6 @@
 import express from "express";
 import {
-    login, logout, register, updateProfile, updateProfilePhoto,
+    login, logout, register, getMe, updateProfile, updateProfilePhoto,
     addResume, deleteResume, getNotifications, markNotificationRead,
     getDashboardStats, forgotPassword, resetPassword
 } from "../controllers/user.controller.js";
@@ -14,6 +14,7 @@ router.route("/login").post(login);
 router.route("/forgot-password").post(forgotPassword);
 router.route("/reset-password").post(resetPassword);
 router.route("/logout").get(logout);
+router.route("/me").get(isAuthenticated, getMe);
 router.route("/profile/update").post(isAuthenticated, singleUpload, updateProfile);
 router.route("/profile/photo").post(isAuthenticated, singleUpload, updateProfilePhoto);
 router.route("/profile/resume").post(isAuthenticated, singleUpload, addResume);

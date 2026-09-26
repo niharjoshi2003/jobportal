@@ -1,41 +1,52 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Login from './components/auth/Login';
-import StaffLogin from './components/auth/StaffLogin';
-import Signup from './components/auth/Signup';
-import ForgotPassword from './components/auth/ForgotPassword';
-import ResetPassword from './components/auth/ResetPassword';
 import LandingPage from './components/LandingPage';
-import DashboardLayout from './components/layout/DashboardLayout';
-import DashboardHome from './components/dashboard/DashboardHome';
-import InternshipsPage from './components/internships/InternshipsPage';
-import InternshipDescription from './components/internships/InternshipDescription';
-import JobsPage from './components/jobs/JobsPage';
-import CompaniesDirectory from './components/companies/CompaniesDirectory';
-import InterviewInvites from './components/interviews/InterviewInvites';
-import ProfilePage from './components/profile/ProfilePage';
-import FeedbacksPage from './components/feedbacks/FeedbacksPage';
-import ReportsPage from './components/reports/ReportsPage';
-import JobDescription from './components/JobDescription';
-import Companies from './components/admin/Companies';
-import CompanyCreate from './components/admin/CompanyCreate';
-import CompanySetup from './components/admin/CompanySetup';
-import AdminJobs from './components/admin/AdminJobs';
-import AdminInternships from './components/admin/AdminInternships';
-import PostJob from './components/admin/PostJob';
-import PostInternship from './components/admin/PostInternship';
-import Applicants from './components/admin/Applicants';
-import InternshipApplicants from './components/admin/InternshipApplicants';
 import ProtectedRoute from './components/admin/ProtectedRoute';
-import RecruiterApplicants from './components/recruiter/RecruiterApplicants';
-import RecruiterJobApplicants from './components/recruiter/RecruiterJobApplicants';
-import AdminOverview from './components/admin/superadmin/AdminOverview';
-import AdminUsers from './components/admin/superadmin/AdminUsers';
-import AdminPendingStudents from './components/admin/superadmin/AdminPendingStudents';
-import LegalPage from './components/legal/LegalPage';
-import AdminAllCompanies from './components/admin/superadmin/AdminAllCompanies';
-import AdminAllJobs from './components/admin/superadmin/AdminAllJobs';
-import AdminAllInternships from './components/admin/superadmin/AdminAllInternships';
-import AdminAuditLogs from './components/admin/superadmin/AdminAuditLogs';
+import SessionBootstrap from './components/auth/SessionBootstrap';
+
+const Login = lazy(() => import('./components/auth/Login'));
+const StaffLogin = lazy(() => import('./components/auth/StaffLogin'));
+const Signup = lazy(() => import('./components/auth/Signup'));
+const ForgotPassword = lazy(() => import('./components/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./components/auth/ResetPassword'));
+const DashboardLayout = lazy(() => import('./components/layout/DashboardLayout'));
+const DashboardHome = lazy(() => import('./components/dashboard/DashboardHome'));
+const InternshipsPage = lazy(() => import('./components/internships/InternshipsPage'));
+const InternshipDescription = lazy(() => import('./components/internships/InternshipDescription'));
+const JobsPage = lazy(() => import('./components/jobs/JobsPage'));
+const CompaniesDirectory = lazy(() => import('./components/companies/CompaniesDirectory'));
+const InterviewInvites = lazy(() => import('./components/interviews/InterviewInvites'));
+const ProfilePage = lazy(() => import('./components/profile/ProfilePage'));
+const FeedbacksPage = lazy(() => import('./components/feedbacks/FeedbacksPage'));
+const ReportsPage = lazy(() => import('./components/reports/ReportsPage'));
+const JobDescription = lazy(() => import('./components/JobDescription'));
+const Companies = lazy(() => import('./components/admin/Companies'));
+const CompanyCreate = lazy(() => import('./components/admin/CompanyCreate'));
+const CompanySetup = lazy(() => import('./components/admin/CompanySetup'));
+const AdminJobs = lazy(() => import('./components/admin/AdminJobs'));
+const AdminInternships = lazy(() => import('./components/admin/AdminInternships'));
+const PostJob = lazy(() => import('./components/admin/PostJob'));
+const PostInternship = lazy(() => import('./components/admin/PostInternship'));
+const Applicants = lazy(() => import('./components/admin/Applicants'));
+const InternshipApplicants = lazy(() => import('./components/admin/InternshipApplicants'));
+const RecruiterApplicants = lazy(() => import('./components/recruiter/RecruiterApplicants'));
+const RecruiterJobApplicants = lazy(() => import('./components/recruiter/RecruiterJobApplicants'));
+const AdminOverview = lazy(() => import('./components/admin/superadmin/AdminOverview'));
+const AdminUsers = lazy(() => import('./components/admin/superadmin/AdminUsers'));
+const AdminPendingStudents = lazy(() => import('./components/admin/superadmin/AdminPendingStudents'));
+const LegalPage = lazy(() => import('./components/legal/LegalPage'));
+const AdminAllCompanies = lazy(() => import('./components/admin/superadmin/AdminAllCompanies'));
+const AdminAllJobs = lazy(() => import('./components/admin/superadmin/AdminAllJobs'));
+const AdminAllInternships = lazy(() => import('./components/admin/superadmin/AdminAllInternships'));
+const AdminAuditLogs = lazy(() => import('./components/admin/superadmin/AdminAuditLogs'));
+
+const pageFallback = (
+    <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
+        Loading...
+    </div>
+);
+
+const page = (node) => <Suspense fallback={pageFallback}>{node}</Suspense>;
 
 const appRouter = createBrowserRouter([
     {
@@ -44,120 +55,117 @@ const appRouter = createBrowserRouter([
     },
     {
         path: '/login',
-        element: <Login />
+        element: page(<Login />)
     },
     {
         path: '/portal-login',
-        element: <StaffLogin />
+        element: page(<StaffLogin />)
     },
     {
         path: '/signup',
-        element: <Signup />
+        element: page(<Signup />)
     },
     {
         path: '/forgot-password',
-        element: <ForgotPassword />
+        element: page(<ForgotPassword />)
     },
     {
         path: '/reset-password',
-        element: <ResetPassword />
+        element: page(<ResetPassword />)
     },
     {
         path: '/privacy',
-        element: <LegalPage />
+        element: page(<LegalPage />)
     },
     {
-        element: <DashboardLayout />,
+        element: page(<DashboardLayout />),
         children: [
-            { path: '/dashboard', element: <DashboardHome /> },
-            { path: '/internships', element: <InternshipsPage /> },
-            { path: '/internships/:id', element: <InternshipDescription /> },
-            { path: '/jobs', element: <JobsPage /> },
-            { path: '/companies', element: <CompaniesDirectory /> },
-            { path: '/interviews', element: <InterviewInvites /> },
-            { path: '/profile', element: <ProfilePage /> },
-            { path: '/feedbacks', element: <FeedbacksPage /> },
-            { path: '/reports', element: <ReportsPage /> },
-            { path: '/description/:id', element: <JobDescription /> },
+            { path: '/dashboard', element: page(<DashboardHome />) },
+            { path: '/internships', element: page(<InternshipsPage />) },
+            { path: '/internships/:id', element: page(<InternshipDescription />) },
+            { path: '/jobs', element: page(<JobsPage />) },
+            { path: '/companies', element: page(<CompaniesDirectory />) },
+            { path: '/interviews', element: page(<InterviewInvites />) },
+            { path: '/profile', element: page(<ProfilePage />) },
+            { path: '/feedbacks', element: page(<FeedbacksPage />) },
+            { path: '/reports', element: page(<ReportsPage />) },
+            { path: '/description/:id', element: page(<JobDescription />) },
             { path: '/hackathons', element: <ComingSoon title="Hackathons" /> },
             { path: '/events', element: <ComingSoon title="Events" /> },
             { path: '/help', element: <ComingSoon title="Help Desk" /> },
         ]
     },
-    // Recruiter dashboard
     {
         path: '/recruiter/applicants',
-        element: <ProtectedRoute roles={['recruiter']}><RecruiterApplicants /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['recruiter']}><RecruiterApplicants /></ProtectedRoute>)
     },
     {
         path: '/recruiter/jobs/:jobId/applicants',
-        element: <ProtectedRoute roles={['recruiter']}><RecruiterJobApplicants /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['recruiter']}><RecruiterJobApplicants /></ProtectedRoute>)
     },
-    // Admin-only management
     {
         path: '/admin/companies',
-        element: <ProtectedRoute roles={['admin']}><Companies /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><Companies /></ProtectedRoute>)
     },
     {
         path: '/admin/companies/create',
-        element: <ProtectedRoute roles={['admin']}><CompanyCreate /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><CompanyCreate /></ProtectedRoute>)
     },
     {
         path: '/admin/companies/:id',
-        element: <ProtectedRoute roles={['admin']}><CompanySetup /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><CompanySetup /></ProtectedRoute>)
     },
     {
         path: '/admin/jobs',
-        element: <ProtectedRoute roles={['admin']}><AdminJobs /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminJobs /></ProtectedRoute>)
     },
     {
         path: '/admin/jobs/create',
-        element: <ProtectedRoute roles={['admin']}><PostJob /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><PostJob /></ProtectedRoute>)
     },
     {
         path: '/admin/jobs/:id/applicants',
-        element: <ProtectedRoute roles={['admin']}><Applicants /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><Applicants /></ProtectedRoute>)
     },
     {
         path: '/admin/internships',
-        element: <ProtectedRoute roles={['admin']}><AdminInternships /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminInternships /></ProtectedRoute>)
     },
     {
         path: '/admin/internships/create',
-        element: <ProtectedRoute roles={['admin']}><PostInternship /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><PostInternship /></ProtectedRoute>)
     },
     {
         path: '/admin/internships/:id/applicants',
-        element: <ProtectedRoute roles={['admin']}><InternshipApplicants /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><InternshipApplicants /></ProtectedRoute>)
     },
-    // Super-admin (admin role only) console
     {
         path: '/admin/overview',
-        element: <ProtectedRoute roles={['admin']}><AdminOverview /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminOverview /></ProtectedRoute>)
     },
     {
         path: '/admin/users',
-        element: <ProtectedRoute roles={['admin']}><AdminUsers /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminUsers /></ProtectedRoute>)
     },
     {
         path: '/admin/pending-students',
-        element: <ProtectedRoute roles={['admin']}><AdminPendingStudents /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminPendingStudents /></ProtectedRoute>)
     },
     {
         path: '/admin/all-companies',
-        element: <ProtectedRoute roles={['admin']}><AdminAllCompanies /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminAllCompanies /></ProtectedRoute>)
     },
     {
         path: '/admin/all-jobs',
-        element: <ProtectedRoute roles={['admin']}><AdminAllJobs /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminAllJobs /></ProtectedRoute>)
     },
     {
         path: '/admin/all-internships',
-        element: <ProtectedRoute roles={['admin']}><AdminAllInternships /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminAllInternships /></ProtectedRoute>)
     },
     {
         path: '/admin/audit-logs',
-        element: <ProtectedRoute roles={['admin']}><AdminAuditLogs /></ProtectedRoute>
+        element: page(<ProtectedRoute roles={['admin']}><AdminAuditLogs /></ProtectedRoute>)
     },
 ]);
 
@@ -177,9 +185,9 @@ function ComingSoon({ title }) {
 
 function App() {
     return (
-        <div>
+        <SessionBootstrap>
             <RouterProvider router={appRouter} />
-        </div>
+        </SessionBootstrap>
     );
 }
 

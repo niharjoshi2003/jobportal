@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { LayoutDashboard, Users, Building2, Briefcase, GraduationCap, LogOut, UserCheck, ScrollText, Menu, X } from 'lucide-react';
 import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
+import { clearSessionToken } from '@/utils/session';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
 import BrandLogo from '../../shared/BrandLogo';
@@ -27,6 +28,7 @@ const AdminShell = ({ children, title, subtitle }) => {
 
     const logout = async () => {
         try { await axios.get(`${USER_API_END_POINT}/logout`, { withCredentials: true }); } catch (e) { /* ignore */ }
+        clearSessionToken();
         dispatch(setUser(null));
         setMobileOpen(false);
         navigate('/portal-login');

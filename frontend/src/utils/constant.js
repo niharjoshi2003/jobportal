@@ -1,4 +1,11 @@
-const BASE = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/v1`;
+// Dev always uses the Vite /api proxy (same origin). That lets a phone on the
+// same Wi-Fi talk to the laptop without calling the phone's own localhost,
+// and it keeps the auth cookie first-party. Production uses VITE_API_BASE_URL.
+const configured = import.meta.env.VITE_API_BASE_URL;
+const origin = import.meta.env.DEV
+    ? ""
+    : String(configured || "http://localhost:8000").replace(/\/$/, "");
+const BASE = `${origin}/api/v1`;
 
 export const USER_API_END_POINT = `${BASE}/user`;
 export const JOB_API_END_POINT = `${BASE}/job`;

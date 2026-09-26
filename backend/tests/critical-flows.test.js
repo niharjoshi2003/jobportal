@@ -65,6 +65,17 @@ test("password recovery flow resets password and allows login", async () => {
     }).expect(200);
     assert.equal(loginRes.body.success, true);
     assert.equal(loginRes.body.user.email, "student1@example.com");
+    assert.ok(loginRes.body.token, "Expected a bearer token for browsers that drop the auth cookie");
+
+    const meRes = await request(app)
+        .get("/api/v1/user/me")
+        .set("Authorization", `Bearer ${loginRes.body.token}`)
+        .expect(200);
+    assert.equal(meRes.body.success, true);
+    assert.equal(meRes.body.user.email, "student1@example.com");
+
+    const denied = await request(app).get("/api/v1/user/me").expect(401);
+    assert.equal(denied.body.message, "User not authenticated");
 });
 
 test("job lifecycle controls and apply limits are enforced", async () => {

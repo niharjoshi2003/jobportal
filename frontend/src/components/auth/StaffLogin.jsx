@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -9,14 +9,16 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setLoading, setUser } from '@/redux/authSlice';
 import { Loader2, ShieldCheck, Building2, GraduationCap } from 'lucide-react';
 import { USER_API_END_POINT } from '@/utils/constant';
+import { setSessionToken } from '@/utils/session';
 import BrandLogo from '../shared/BrandLogo';
 
 // Admin + Recruiter login. Students log in at /login.
 const StaffLogin = () => {
     const [input, setInput] = useState({ email: "", password: "", role: "recruiter" });
-    const { loading, user } = useSelector(store => store.auth);
+    const { loading, user, sessionReady } = useSelector(store => store.auth);
     const navigate = useNavigate();
     const dispatch = useDispatch();
+    const userIntent = useRef(false);
 
     const changeEventHandler = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value });
@@ -26,6 +28,9 @@ const StaffLogin = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault();
+        // Mobile password fill can fire submit on load. Only continue after a
+        // real tap or key press on this form.
+        if (!userIntent.current) return;
         if (!input.email || !input.password || !input.role) {
             toast.error("Please fill all fields.");
             return;
@@ -38,6 +43,7 @@ const StaffLogin = () => {
                 { headers: { "Content-Type": "application/json" }, withCredentials: true }
             );
             if (res.data?.success) {
+                if (res.data.token) setSessionToken(res.data.token);
                 dispatch(setUser(res.data.user));
                 toast.success(res.data.message || `Welcome back, ${res.data.user.fullname}`);
                 const role = res.data.user.role;
@@ -53,16 +59,18 @@ const StaffLogin = () => {
     };
 
     useEffect(() => {
-        if (user) {
-            const dest = user.role === 'admin'
-                ? '/admin/overview'
-                : user.role === 'recruiter'
-                    ? '/recruiter/applicants'
-                    : '/dashboard';
-            navigate(dest);
-        }
-        // eslint-disable-next-line
-    }, []);
+        dispatch(setLoading(false));
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (!sessionReady || !user) return;
+        const dest = user.role === 'admin'
+            ? '/admin/overview'
+            : user.role === 'recruiter'
+                ? '/recruiter/applicants'
+                : '/dashboard';
+        navigate(dest);
+    }, [sessionReady, user, navigate]);
 
     const roleTabs = [
         { id: 'recruiter', label: 'Recruiter', icon: Building2, hint: 'Use the credentials issued by your administrator.' },
@@ -114,7 +122,12 @@ const StaffLogin = () => {
                         })}
                     </div>
 
-                    <form onSubmit={submitHandler} className="space-y-4">
+                    <form
+                        onSubmit={submitHandler}
+                        onPointerDown={() => { userIntent.current = true; }}
+                        onKeyDown={() => { userIntent.current = true; }}
+                        className="space-y-4"
+                    >
                         <div>
                             <Label className="text-foreground text-sm">Email</Label>
                             <Input type="email" value={input.email} name="email" onChange={changeEventHandler}
@@ -136,11 +149,11 @@ const StaffLogin = () => {
                         <p className="text-xs text-muted-foreground">{activeHint}</p>
 
                         {loading ? (
-                            <Button className="w-full bg-primary" disabled>
+                            <Button type="button" className="w-full bg-primary" disabled>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please wait
                             </Button>
                         ) : (
-                            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white capitalize">
+                            <Button type="submit" data-login-submit="true" className="w-full bg-primary hover:bg-primary/90 text-white capitalize">
                                 Login as {input.role}
                             </Button>
                         )}

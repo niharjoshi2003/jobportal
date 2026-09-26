@@ -8,7 +8,7 @@ import { setUser } from '@/redux/authSlice';
 import { USER_API_END_POINT } from '@/utils/constant';
 
 const DashboardLayout = () => {
-    const { user } = useSelector(store => store.auth);
+    const { user, sessionReady } = useSelector(store => store.auth);
     const dispatch = useDispatch();
 
     // Pull fresh notifications periodically so newly posted jobs / approvals show
@@ -38,6 +38,14 @@ const DashboardLayout = () => {
         const id = setInterval(refresh, 60_000);
         return () => { cancelled = true; clearInterval(id); };
     }, [user?._id, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (!sessionReady) {
+        return (
+            <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
+                Checking session...
+            </div>
+        );
+    }
 
     if (!user) {
         return <Navigate to="/login" replace />;

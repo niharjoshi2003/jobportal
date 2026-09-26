@@ -25,7 +25,7 @@ const Signup = () => {
     const [errors, setErrors] = useState({});
     const [agreed, setAgreed] = useState(false);
     const [legalOpen, setLegalOpen] = useState(false);
-    const { loading, user } = useSelector(store => store.auth);
+    const { loading, user, sessionReady } = useSelector(store => store.auth);
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
@@ -98,15 +98,18 @@ const Signup = () => {
     };
 
     useEffect(() => {
-        if (!user) return;
+        dispatch(setLoading(false));
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (!sessionReady || !user) return;
         const dest = user.role === 'admin'
             ? '/admin/overview'
             : user.role === 'recruiter'
                 ? '/recruiter/applicants'
                 : '/dashboard';
         navigate(dest);
-        // eslint-disable-next-line
-    }, []);
+    }, [sessionReady, user, navigate]);
 
     const helperText = useMemo(() => ({
         email: 'We will send approval and job notifications to this address.',

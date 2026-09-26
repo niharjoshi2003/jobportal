@@ -214,6 +214,8 @@ curl -b cookies.txt "http://localhost:8000/api/v1/job/get?keyword=react"
 - Render / Railway / Fly: set the same env vars there. Use `npm start` as the start command.
 - Set `NODE_ENV=production` (this enables `secure` + `sameSite=none` on the auth cookie).
 - Add your deployed frontend URL to `FRONTEND_URL` (comma-separated for multiple).
+- Phones often drop that cross-site cookie. Login also returns the JWT, and the web app keeps it in `sessionStorage` (not `localStorage`) and sends `Authorization: Bearer` on later requests. You do not need to clear site data after a deploy for login to work.
+- To open the dev app from a phone on the same Wi-Fi, run the Vite server and visit `http://<laptop-ip>:5173`. Dev traffic goes through the `/api` proxy, so the phone does not call its own `localhost`. If you point the phone at the API host directly instead, add that page origin to `FRONTEND_URL`.
 - For MongoDB Atlas, replace the `0.0.0.0/0` Network Access rule with your host's egress IPs.
 
 ---
@@ -222,7 +224,7 @@ curl -b cookies.txt "http://localhost:8000/api/v1/job/get?keyword=react"
 
 - [x] Secrets in `.env`, not in source
 - [x] Passwords hashed with bcrypt (10 rounds)
-- [x] JWT in httpOnly cookie (no `localStorage`)
+- [x] JWT in httpOnly cookie, plus a `sessionStorage` bearer fallback when a phone drops the cross-site cookie (not `localStorage`)
 - [x] CORS whitelist via env, with `credentials: true`
 - [x] Helmet enabled
 - [x] Rate limiting on `/login` and `/register`

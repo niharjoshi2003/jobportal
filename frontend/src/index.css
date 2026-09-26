@@ -172,3 +172,23 @@
     50%       { box-shadow: 0 4px 24px hsl(243 100% 68% / 0.55), inset 0 1px 0 rgba(255,255,255,0.15); }
 }
 .logo-breathe { animation: logo-breathe 3.5s ease-in-out infinite; }
+
+/* Phones struggle with continuous motion and backdrop blur. */
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+    .animate-float,
+    .animate-float-delayed,
+    .animate-marquee,
+    .animate-pulse-soft,
+    .logo-breathe {
+        animation: none !important;
+    }
+
+    .glass-card,
+    .backdrop-blur,
+    .backdrop-blur-sm,
+    .backdrop-blur-md,
+    .backdrop-blur-xl {
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+    }
+}

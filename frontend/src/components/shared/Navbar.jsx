@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
+import { clearSessionToken } from '@/utils/session';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
 import BrandLogo from './BrandLogo';
@@ -36,6 +37,7 @@ const Navbar = () => {
         } catch (error) {
             // Backend offline, proceed with client-side logout
         }
+        clearSessionToken();
         dispatch(setUser(null));
         setMobileMenuOpen(false);
         navigate("/login");

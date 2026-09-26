@@ -13,6 +13,7 @@ import {
     APPLICATION_API_END_POINT, USER_API_END_POINT,
 } from '@/utils/constant';
 import { setUser } from '@/redux/authSlice';
+import { clearSessionToken } from '@/utils/session';
 import { downloadCsv } from '@/utils/csv';
 
 const statusColor = {
@@ -54,6 +55,7 @@ const RecruiterApplicants = () => {
         try {
             const res = await axios.get(`${USER_API_END_POINT}/logout`, { withCredentials: true });
             if (res.data?.success) {
+                clearSessionToken();
                 dispatch(setUser(null));
                 navigate('/portal-login');
             }

@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
  * Defaults to admin-only. Pass `roles={['recruiter']}` etc. to override.
  */
 const ProtectedRoute = ({ children, roles = ['admin'] }) => {
-    const { user } = useSelector(store => store.auth);
+    const { user, sessionReady } = useSelector(store => store.auth);
     const navigate = useNavigate();
 
     // Admin/recruiter-only routes should bounce unauthenticated users to the
@@ -16,6 +16,7 @@ const ProtectedRoute = ({ children, roles = ['admin'] }) => {
     const loginRoute = isStaffRoute ? '/portal-login' : '/login';
 
     useEffect(() => {
+        if (!sessionReady) return;
         if (!user) {
             navigate(loginRoute);
             return;
@@ -23,7 +24,15 @@ const ProtectedRoute = ({ children, roles = ['admin'] }) => {
         if (!roles.includes(user.role)) {
             navigate("/");
         }
-    }, [user, roles, navigate, loginRoute]);
+    }, [sessionReady, user, roles, navigate, loginRoute]);
+
+    if (!sessionReady) {
+        return (
+            <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
+                Checking session...
+            </div>
+        );
+    }
 
     if (!user || !roles.includes(user.role)) return null;
 

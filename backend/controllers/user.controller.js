@@ -82,6 +82,23 @@ const uploadResumeFile = async (req, file) => {
     }
 };
 
+export const toPublicUser = (user) => ({
+    _id: user._id,
+    fullname: user.fullname,
+    email: user.email,
+    phoneNumber: user.phoneNumber,
+    role: user.role,
+    gender: user.gender,
+    college: user.college,
+    rollNumber: user.rollNumber,
+    status: user.status,
+    personalEmail: user.personalEmail,
+    graduationYear: user.graduationYear,
+    profile: user.profile,
+    bookmarkedJobs: user.bookmarkedJobs,
+    notifications: user.notifications,
+});
+
 const getAuthCookieOptions = () => {
     const isProd = process.env.NODE_ENV === "production";
     return {
@@ -234,26 +251,19 @@ export const login = async (req, res) => {
         user.profile.profileCompletion = profileCompletion;
         await user.save();
 
-        user = {
-            _id: user._id,
-            fullname: user.fullname,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-            role: user.role,
-            gender: user.gender,
-            college: user.college,
-            rollNumber: user.rollNumber,
-            status: user.status,
-            personalEmail: user.personalEmail,
-            graduationYear: user.graduationYear,
-            profile: user.profile,
-            bookmarkedJobs: user.bookmarkedJobs,
-            notifications: user.notifications,
-        };
+        user = toPublicUser(user);
 
         return res.status(200)
             .cookie("token", token, getAuthCookieOptions())
-            .json({ message: `Welcome back ${user.fullname}`, user, success: true });
+            .json({
+                message: `Welcome back ${user.fullname}`,
+                user,
+                // Returned so mobile browsers that drop the cross-site cookie
+                // can send it back as Authorization: Bearer. The client keeps
+                // it in sessionStorage, not localStorage.
+                token,
+                success: true,
+            });
     } catch (error) {
         logControllerError("user_handler_failed", error, req);
         return res.status(500).json({ message: "Server error", success: false });
@@ -364,6 +374,21 @@ export const resetPassword = async (req, res) => {
     } catch (error) {
         logger.error("reset_password_failed", { error: error?.message });
         return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+export const getMe = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: "User not authenticated", success: false });
+        }
+        return res.status(200).json({
+            user: toPublicUser(req.user),
+            success: true,
+        });
+    } catch (error) {
+        logControllerError("user_handler_failed", error, req);
+        return res.status(500).json({ message: "Server error", success: false });
     }
 };
 
