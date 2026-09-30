@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { rewriteProfileResumeUrls } from "../utils/resumeDelivery.js";
 
 const userSchema = new mongoose.Schema({
     fullname: {
@@ -136,6 +137,13 @@ userSchema.pre("validate", function (next) {
     }
     next();
 });
+
+const presentResumeUrls = (_doc, ret) => {
+    rewriteProfileResumeUrls(ret.profile);
+    return ret;
+};
+userSchema.set("toJSON", { transform: presentResumeUrls });
+userSchema.set("toObject", { transform: presentResumeUrls });
 
 userSchema.methods.calculateProfileCompletion = function () {
     let score = 0;

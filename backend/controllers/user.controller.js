@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { uploadBufferToCloudinary } from "../utils/cloudinary.js";
+import { resumeDownloadUrl, rewriteProfileResumeUrls } from "../utils/resumeDelivery.js";
 import { saveFileLocally, toPublicFileUrl } from "../utils/fileStorage.js";
 import { sendEmail } from "../utils/mailer.js";
 import { logger } from "../utils/logger.js";
@@ -71,7 +72,7 @@ const uploadResumeFile = async (req, file) => {
             folder: "job-o-hire/resumes",
             resource_type: "raw",
         });
-        return upload.secure_url;
+        return resumeDownloadUrl(upload.secure_url, file.originalname);
     }
 
     // auto mode: try cloudinary first, then local fallback
@@ -80,7 +81,7 @@ const uploadResumeFile = async (req, file) => {
             folder: "job-o-hire/resumes",
             resource_type: "raw",
         });
-        return upload.secure_url;
+        return resumeDownloadUrl(upload.secure_url, file.originalname);
     } catch (error) {
         logger.warn("resume_cloudinary_upload_failed_fallback_local", {
             error: error?.message,
@@ -103,7 +104,9 @@ export const toPublicUser = (user) => ({
     status: user.status,
     personalEmail: user.personalEmail,
     graduationYear: user.graduationYear,
-    profile: user.profile,
+    profile: rewriteProfileResumeUrls(
+        user.profile?.toObject ? user.profile.toObject() : user.profile
+    ),
     bookmarkedJobs: user.bookmarkedJobs,
     notifications: user.notifications,
 });
