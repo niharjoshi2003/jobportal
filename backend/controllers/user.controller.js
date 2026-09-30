@@ -16,8 +16,17 @@ const RESUME_ALLOWED_MIME_TYPES = [
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
-const getResumeStorageMode = () =>
-    String(process.env.RESUME_STORAGE_MODE || "local").trim().toLowerCase();
+const isEphemeralHost = () =>
+    process.env.NODE_ENV === "production" || process.env.RENDER === "true";
+
+const getResumeStorageMode = () => {
+    const configured = String(process.env.RESUME_STORAGE_MODE || "").trim().toLowerCase();
+    // Render (and similar hosts) wipe the local disk on every deploy/restart.
+    // A /uploads/... URL saved today 404s after the next restart, so production
+    // always stores resumes on Cloudinary.
+    if (isEphemeralHost()) return "cloudinary";
+    return configured || "local";
+};
 
 const isUploadValidationError = (message = "") =>
     /(must be|only|allowed|smaller|missing|no file uploaded)/i.test(String(message));
