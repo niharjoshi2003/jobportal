@@ -140,7 +140,59 @@ const AdminOverview = () => {
                             <StatCard icon={Building2} label="Companies" value={stats?.companies?.total} sub={`${stats?.companies?.verified || 0} verified, ${stats?.companies?.pending || 0} pending`} color="primary" />
                             <StatCard icon={Briefcase} label="Jobs Posted" value={stats?.jobs?.total} color="emerald-400" />
                             <StatCard icon={GraduationCap} label="Internships" value={stats?.internships?.total} color="indigo-400" />
-                            <StatCard icon={FileText} label="Applications" value={(stats?.applications?.jobs || 0) + (stats?.applications?.internships || 0)} sub={`${stats?.applications?.jobs || 0} jobs · ${stats?.applications?.internships || 0} internships`} color="orange-400" />
+                            <Link to="/admin/applications">
+                                <StatCard icon={FileText} label="Applications" value={(stats?.applications?.jobs || 0) + (stats?.applications?.internships || 0)} sub={`${stats?.applications?.jobs || 0} jobs · ${stats?.applications?.internships || 0} internships`} color="orange-400" />
+                            </Link>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Application transparency</h2>
+                            <Link to="/admin/applications" className="text-xs text-primary hover:underline">View all</Link>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="glass-card rounded-xl p-4">
+                                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Most applied jobs</p>
+                                {(stats?.applications?.topJobs || []).length === 0 ? (
+                                    <p className="text-sm text-muted-foreground">No job applications yet.</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {stats.applications.topJobs.map((row) => (
+                                            <Link
+                                                key={row.jobId || row._id}
+                                                to={`/admin/jobs/${row.jobId}/applicants`}
+                                                className="flex items-center justify-between gap-3 text-sm hover:text-primary"
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="font-medium text-foreground truncate">{row.title}</p>
+                                                    <p className="text-xs text-muted-foreground truncate">{row.companyName || '—'}</p>
+                                                </div>
+                                                <span className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary flex-shrink-0">
+                                                    {row.count} applicants
+                                                </span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="glass-card rounded-xl p-4">
+                                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Companies with most applicants</p>
+                                {(stats?.applications?.topCompanies || []).length === 0 ? (
+                                    <p className="text-sm text-muted-foreground">No company applications yet.</p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {stats.applications.topCompanies.map((row) => (
+                                            <div key={row.companyId || row._id} className="flex items-center justify-between gap-3 text-sm">
+                                                <p className="font-medium text-foreground truncate">{row.companyName || 'Unknown company'}</p>
+                                                <span className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary flex-shrink-0">
+                                                    {row.count} applicants
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 

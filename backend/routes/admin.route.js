@@ -5,6 +5,7 @@ import {
     getStats,
     listUsers, updateUserRole, deleteUser,
     approveStudent, rejectStudent,
+    getStudentProfile, listApplications,
     listCompanies, setCompanyVerified, deleteCompany,
     createCompanyWithRecruiter, resetRecruiterPassword,
     listJobs, deleteJob, updateJobLifecycle,
@@ -19,6 +20,8 @@ router.use(isAuthenticated, authorize("admin"));
 router.get("/stats", getStats);
 
 router.get("/users", listUsers);
+router.get("/users/:id/profile", getStudentProfile);
+router.get("/applications", listApplications);
 router.patch("/users/:id/role", updateUserRole);
 router.patch("/users/:id/approve", approveStudent);
 router.patch("/users/:id/reject", rejectStudent);

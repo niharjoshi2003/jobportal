@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Trash2, ShieldCheck, Plus, Briefcase, Archive, PauseCircle, PlayCircle } from 'lucide-react';
+import { Search, Trash2, ShieldCheck, Plus, Briefcase, Archive, PauseCircle, PlayCircle, Users } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
@@ -113,16 +113,17 @@ const AdminAllJobs = () => {
                                 <TableHead>Status</TableHead>
                             <TableHead>Location</TableHead>
                             <TableHead>Salary</TableHead>
+                            <TableHead>Applicants</TableHead>
                             <TableHead>Created</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
                         ) : jobs.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="text-center py-10">
+                                <TableCell colSpan={9} className="text-center py-10">
                                     <div className="flex flex-col items-center gap-3">
                                         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                                             <Briefcase size={20} className="text-primary" />
@@ -161,7 +162,15 @@ const AdminAllJobs = () => {
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">{j.location}</TableCell>
                                 <TableCell className="text-muted-foreground">{j.salary} LPA</TableCell>
-                                <TableCell className="text-muted-foreground">{j.createdAt?.split('T')[0]}</TableCell>
+                                <TableCell>
+                                    <Link
+                                        to={`/admin/jobs/${j._id}/applicants`}
+                                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                                    >
+                                        <Users size={12} /> {j.applicantCount || 0}
+                                    </Link>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">{j.createdAt?.split('T')[0] || (j.createdAt ? new Date(j.createdAt).toISOString().split('T')[0] : '-')}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="inline-flex items-center gap-1">
                                         {j.status !== 'open' && (

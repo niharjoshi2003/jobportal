@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Trash2, ShieldCheck } from 'lucide-react';
+import { Search, Trash2, ShieldCheck, Users } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
@@ -65,14 +66,15 @@ const AdminAllInternships = () => {
                             <TableHead>Location</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Deadline</TableHead>
+                            <TableHead>Applicants</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Loading...</TableCell></TableRow>
                         ) : internships.length === 0 ? (
-                            <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No internships found</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">No internships found</TableCell></TableRow>
                         ) : internships.map(i => (
                             <TableRow key={i._id}>
                                 <TableCell className="font-medium">{i.title}</TableCell>
@@ -92,6 +94,14 @@ const AdminAllInternships = () => {
                                     }`}>{i.status}</span>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">{i.deadline ? new Date(i.deadline).toLocaleDateString() : '-'}</TableCell>
+                                <TableCell>
+                                    <Link
+                                        to={`/admin/internships/${i._id}/applicants`}
+                                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                                    >
+                                        <Users size={12} /> {i.applicantCount || 0}
+                                    </Link>
+                                </TableCell>
                                 <TableCell className="text-right">
                                     <button
                                         onClick={() => deleteInternship(i._id, i.title)}

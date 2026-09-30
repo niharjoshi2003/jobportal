@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Trash2, ChevronDown } from 'lucide-react';
+import { Search, Trash2, ChevronDown, Eye } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
+import AdminStudentProfileModal from './AdminStudentProfileModal';
 import { Input } from '../../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
@@ -23,6 +24,8 @@ const AdminUsers = () => {
     const [q, setQ] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [selectedUserId, setSelectedUserId] = useState(null);
+    const [profileOpen, setProfileOpen] = useState(false);
 
     const fetchUsers = async () => {
         try {
@@ -129,6 +132,18 @@ const AdminUsers = () => {
                                 <TableCell className="text-muted-foreground">{u.createdAt?.split('T')[0]}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
+                                        {u.role === 'student' && (
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedUserId(u._id);
+                                                    setProfileOpen(true);
+                                                }}
+                                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-primary/10 text-primary hover:bg-primary/20"
+                                                title="View student profile"
+                                            >
+                                                <Eye size={12} /> Profile
+                                            </button>
+                                        )}
                                         <Popover>
                                             <PopoverTrigger className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-white/5 text-xs">
                                                 Role <ChevronDown size={12} />
@@ -159,6 +174,12 @@ const AdminUsers = () => {
                     </TableBody>
                 </Table>
             </div>
+
+            <AdminStudentProfileModal
+                userId={selectedUserId}
+                open={profileOpen}
+                onOpenChange={setProfileOpen}
+            />
         </AdminShell>
     );
 };

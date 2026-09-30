@@ -60,11 +60,44 @@ export const getStats = async (req, res) => {
         ]);
 
         const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const [newUsersThisWeek, newJobsThisWeek, newInternshipsThisWeek] = await Promise.all([
+        const [
+            newUsersThisWeek, newJobsThisWeek, newInternshipsThisWeek,
+            jobStatusAgg, internshipStatusAgg, topJobsAgg, topCompaniesAgg,
+        ] = await Promise.all([
             User.countDocuments({ createdAt: { $gte: since } }),
             Job.countDocuments({ createdAt: { $gte: since } }),
             Internship.countDocuments({ createdAt: { $gte: since } }),
+            Application.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+            InternshipApplication.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+            Application.aggregate([
+                { $group: { _id: "$job", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 8 },
+                { $lookup: { from: "jobs", localField: "_id", foreignField: "_id", as: "job" } },
+                { $unwind: "$job" },
+                { $lookup: { from: "companies", localField: "job.company", foreignField: "_id", as: "company" } },
+                { $unwind: { path: "$company", preserveNullAndEmptyArrays: true } },
+                { $project: { count: 1, jobId: "$job._id", title: "$job.title", companyName: "$company.name" } },
+            ]),
+            Application.aggregate([
+                { $lookup: { from: "jobs", localField: "job", foreignField: "_id", as: "job" } },
+                { $unwind: "$job" },
+                { $group: { _id: "$job.company", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 8 },
+                { $lookup: { from: "companies", localField: "_id", foreignField: "_id", as: "company" } },
+                { $unwind: { path: "$company", preserveNullAndEmptyArrays: true } },
+                { $project: { count: 1, companyId: "$company._id", companyName: "$company.name" } },
+            ]),
         ]);
+
+        const toStatusMap = (rows) => {
+            const map = { pending: 0, shortlisted: 0, accepted: 0, rejected: 0 };
+            for (const row of rows) {
+                if (row._id && map[row._id] !== undefined) map[row._id] = row.count;
+            }
+            return map;
+        };
 
         return res.status(200).json({
             stats: {
@@ -72,7 +105,14 @@ export const getStats = async (req, res) => {
                 companies: { total: totalCompanies, verified: verifiedCompanies, pending: totalCompanies - verifiedCompanies },
                 jobs: { total: totalJobs },
                 internships: { total: totalInternships },
-                applications: { jobs: totalJobApplications, internships: totalInternshipApplications },
+                applications: {
+                    jobs: totalJobApplications,
+                    internships: totalInternshipApplications,
+                    jobStatus: toStatusMap(jobStatusAgg),
+                    internshipStatus: toStatusMap(internshipStatusAgg),
+                    topJobs: topJobsAgg,
+                    topCompanies: topCompaniesAgg,
+                },
                 lastWeek: { users: newUsersThisWeek, jobs: newJobsThisWeek, internships: newInternshipsThisWeek },
             },
             success: true,
@@ -100,6 +140,146 @@ export const listUsers = async (req, res) => {
         }
         const users = await User.find(filter).select("-password").sort({ createdAt: -1 });
         return res.status(200).json({ users, success: true });
+    } catch (error) {
+        logControllerError("admin_handler_failed", error, req);
+        return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
+const attachApplicantCounts = async (items, Model, foreignKey) => {
+    if (!items.length) return items;
+    const ids = items.map((item) => item._id);
+    const agg = await Model.aggregate([
+        { $match: { [foreignKey]: { $in: ids } } },
+        { $group: { _id: `$${foreignKey}`, total: { $sum: 1 } } },
+    ]);
+    const map = Object.fromEntries(agg.map((row) => [String(row._id), row.total]));
+    return items.map((item) => ({
+        ...item,
+        applicantCount: map[String(item._id)] || 0,
+    }));
+};
+
+// Admin can open any student's profile plus every job/internship they applied to.
+export const getStudentProfile = async (req, res) => {
+    try {
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({ message: "Invalid user id.", success: false });
+        }
+        const student = await User.findById(req.params.id).select("-password -notifications");
+        if (!student) return res.status(404).json({ message: "Student not found.", success: false });
+        if (student.role !== "student") {
+            return res.status(400).json({ message: "Only student profiles can be viewed here.", success: false });
+        }
+
+        const [jobApplications, internshipApplications] = await Promise.all([
+            Application.find({ applicant: student._id })
+                .populate({
+                    path: "job",
+                    select: "title location jobType",
+                    populate: { path: "company", select: "name" },
+                })
+                .sort({ createdAt: -1 }),
+            InternshipApplication.find({ applicant: student._id })
+                .populate({
+                    path: "internship",
+                    select: "title location",
+                    populate: { path: "company", select: "name" },
+                })
+                .sort({ createdAt: -1 }),
+        ]);
+
+        return res.status(200).json({
+            applicant: student,
+            jobApplications,
+            internshipApplications,
+            success: true,
+        });
+    } catch (error) {
+        logControllerError("admin_handler_failed", error, req);
+        return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
+// Platform-wide application list: which student applied to which company/job.
+export const listApplications = async (req, res) => {
+    try {
+        const { q, status, kind = "job" } = req.query;
+        const allowedStatus = ["pending", "shortlisted", "accepted", "rejected"];
+        const statusFilter = allowedStatus.includes(String(status)) ? { status: String(status) } : {};
+        const needle = String(q || "").trim().toLowerCase();
+
+        const matchesSearch = (row) => {
+            if (!needle) return true;
+            const haystack = [
+                row.applicant?.fullname,
+                row.applicant?.email,
+                row.applicant?.college,
+                row.applicant?.rollNumber,
+                row.listingTitle,
+                row.companyName,
+            ].join(" ").toLowerCase();
+            return haystack.includes(needle);
+        };
+
+        const rows = [];
+        if (kind !== "internship") {
+            const jobApps = await Application.find(statusFilter)
+                .sort({ createdAt: -1 })
+                .limit(1000)
+                .populate({ path: "applicant", select: "fullname email college rollNumber phoneNumber" })
+                .populate({
+                    path: "job",
+                    select: "title location jobType company",
+                    populate: { path: "company", select: "name" },
+                })
+                .lean();
+            for (const app of jobApps) {
+                rows.push({
+                    _id: app._id,
+                    kind: "job",
+                    status: app.status,
+                    createdAt: app.createdAt,
+                    applicant: app.applicant,
+                    listingId: app.job?._id,
+                    listingTitle: app.job?.title || "",
+                    companyName: app.job?.company?.name || "",
+                    location: app.job?.location || "",
+                });
+            }
+        }
+
+        if (kind !== "job") {
+            const internshipApps = await InternshipApplication.find(statusFilter)
+                .sort({ createdAt: -1 })
+                .limit(1000)
+                .populate({ path: "applicant", select: "fullname email college rollNumber phoneNumber" })
+                .populate({
+                    path: "internship",
+                    select: "title location company",
+                    populate: { path: "company", select: "name" },
+                })
+                .lean();
+            for (const app of internshipApps) {
+                rows.push({
+                    _id: app._id,
+                    kind: "internship",
+                    status: app.status,
+                    createdAt: app.createdAt,
+                    applicant: app.applicant,
+                    listingId: app.internship?._id,
+                    listingTitle: app.internship?.title || "",
+                    companyName: app.internship?.company?.name || "",
+                    location: app.internship?.location || "",
+                });
+            }
+        }
+
+        const applications = rows
+            .filter(matchesSearch)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        return res.status(200).json({ applications, success: true });
     } catch (error) {
         logControllerError("admin_handler_failed", error, req);
         return res.status(500).json({ message: "Server error", success: false });
@@ -525,8 +705,10 @@ export const listJobs = async (req, res) => {
         const jobs = await Job.find(filter)
             .populate({ path: "company", select: "name verified" })
             .populate({ path: "created_by", select: "fullname email" })
-            .sort({ createdAt: -1 });
-        return res.status(200).json({ jobs, success: true });
+            .sort({ createdAt: -1 })
+            .lean();
+        const jobsWithCounts = await attachApplicantCounts(jobs, Application, "job");
+        return res.status(200).json({ jobs: jobsWithCounts, success: true });
     } catch (error) {
         logControllerError("admin_handler_failed", error, req);
         return res.status(500).json({ message: "Server error", success: false });
@@ -667,8 +849,10 @@ export const listInternships = async (req, res) => {
         const internships = await Internship.find(filter)
             .populate({ path: "company", select: "name verified" })
             .populate({ path: "created_by", select: "fullname email" })
-            .sort({ createdAt: -1 });
-        return res.status(200).json({ internships, success: true });
+            .sort({ createdAt: -1 })
+            .lean();
+        const internshipsWithCounts = await attachApplicantCounts(internships, InternshipApplication, "internship");
+        return res.status(200).json({ internships: internshipsWithCounts, success: true });
     } catch (error) {
         logControllerError("admin_handler_failed", error, req);
         return res.status(500).json({ message: "Server error", success: false });

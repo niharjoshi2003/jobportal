@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { LayoutDashboard, Users, Building2, Briefcase, GraduationCap, LogOut, UserCheck, ScrollText, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, Briefcase, GraduationCap, LogOut, UserCheck, ScrollText, Menu, X, FileText } from 'lucide-react';
 import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
 import { clearSessionToken } from '@/utils/session';
@@ -16,6 +16,7 @@ const navItems = [
     { path: '/admin/all-companies', label: 'Companies', icon: Building2 },
     { path: '/admin/all-jobs', label: 'Jobs', icon: Briefcase },
     { path: '/admin/all-internships', label: 'Internships', icon: GraduationCap },
+    { path: '/admin/applications', label: 'Applications', icon: FileText },
     { path: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
 ];
 

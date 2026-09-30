@@ -39,6 +39,7 @@ const AdminAllCompanies = lazy(() => import('./components/admin/superadmin/Admin
 const AdminAllJobs = lazy(() => import('./components/admin/superadmin/AdminAllJobs'));
 const AdminAllInternships = lazy(() => import('./components/admin/superadmin/AdminAllInternships'));
 const AdminAuditLogs = lazy(() => import('./components/admin/superadmin/AdminAuditLogs'));
+const AdminApplications = lazy(() => import('./components/admin/superadmin/AdminApplications'));
 
 const pageFallback = (
     <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
@@ -166,6 +167,10 @@ const appRouter = createBrowserRouter([
     {
         path: '/admin/audit-logs',
         element: page(<ProtectedRoute roles={['admin']}><AdminAuditLogs /></ProtectedRoute>)
+    },
+    {
+        path: '/admin/applications',
+        element: page(<ProtectedRoute roles={['admin']}><AdminApplications /></ProtectedRoute>)
     },
 ]);
 

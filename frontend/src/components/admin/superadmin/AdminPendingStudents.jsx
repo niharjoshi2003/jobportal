@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Check, X } from 'lucide-react';
+import { Search, Check, X, Eye } from 'lucide-react';
 import { ADMIN_API_END_POINT } from '@/utils/constant';
 import AdminShell from './AdminShell';
+import AdminStudentProfileModal from './AdminStudentProfileModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
 
 const StatusBadge = ({ status }) => {
@@ -18,6 +19,8 @@ const AdminPendingStudents = () => {
     const [loading, setLoading] = useState(true);
     const [q, setQ] = useState('');
     const [statusFilter, setStatusFilter] = useState('pending');
+    const [selectedUserId, setSelectedUserId] = useState(null);
+    const [profileOpen, setProfileOpen] = useState(false);
 
     const fetchUsers = async () => {
         try {
@@ -129,6 +132,16 @@ const AdminPendingStudents = () => {
                                 <TableCell className="text-muted-foreground">{u.createdAt?.split('T')[0]}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedUserId(u._id);
+                                                setProfileOpen(true);
+                                            }}
+                                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-primary/10 text-primary hover:bg-primary/20"
+                                            title="View student profile"
+                                        >
+                                            <Eye size={12} /> Profile
+                                        </button>
                                         {u.status !== 'approved' && (
                                             <button
                                                 onClick={() => approve(u._id, u.fullname)}
@@ -154,6 +167,12 @@ const AdminPendingStudents = () => {
                     </TableBody>
                 </Table>
             </div>
+
+            <AdminStudentProfileModal
+                userId={selectedUserId}
+                open={profileOpen}
+                onOpenChange={setProfileOpen}
+            />
         </AdminShell>
     );
 };

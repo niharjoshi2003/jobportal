@@ -337,3 +337,74 @@ test("admin can approve and reject a pending student without 500", async () => {
     assert.equal(afterReject.password, pendingPassword, "reject must not wipe the existing password hash");
 });
 
+test("admin can view a student profile and the job they applied to", async () => {
+    const adminPassword = await bcrypt.hash("AdminPass789", 10);
+    const admin = await User.create({
+        fullname: "Transparency Admin",
+        email: "transparency.admin@example.com",
+        phoneNumber: 7778889999,
+        password: adminPassword,
+        role: "admin",
+    });
+
+    const studentPassword = await bcrypt.hash("StudentPass123", 10);
+    const student = await User.create({
+        fullname: "Applied Student",
+        email: "applied.student@example.com",
+        phoneNumber: 1212121212,
+        password: studentPassword,
+        role: "student",
+        status: "approved",
+        college: "Transparency College",
+        rollNumber: "T100",
+    });
+
+    const company = await Company.create({
+        name: "Transparency Co",
+        userId: admin._id,
+        verified: true,
+    });
+    const job = await Job.create({
+        title: "Frontend Engineer",
+        description: "Build UI",
+        requirements: ["React"],
+        salary: 10,
+        location: "Remote",
+        jobType: "Full-time",
+        experienceLevel: 1,
+        position: 5,
+        company: company._id,
+        created_by: admin._id,
+    });
+    await Application.create({
+        job: job._id,
+        applicant: student._id,
+        status: "pending",
+    });
+
+    const adminAgent = request.agent(app);
+    await adminAgent.post("/api/v1/user/login").send({
+        email: "transparency.admin@example.com",
+        password: "AdminPass789",
+        role: "admin",
+    }).expect(200);
+
+    const profileRes = await adminAgent
+        .get(`/api/v1/admin/users/${student._id}/profile`)
+        .expect(200);
+    assert.equal(profileRes.body.success, true);
+    assert.equal(profileRes.body.applicant.email, "applied.student@example.com");
+    assert.equal(profileRes.body.applicant.password, undefined);
+    assert.equal(profileRes.body.jobApplications.length, 1);
+    assert.equal(profileRes.body.jobApplications[0].job.title, "Frontend Engineer");
+    assert.equal(profileRes.body.jobApplications[0].job.company.name, "Transparency Co");
+
+    const listRes = await adminAgent.get("/api/v1/admin/applications?kind=job").expect(200);
+    assert.equal(listRes.body.success, true);
+    assert.ok(listRes.body.applications.some((row) => row.applicant?.email === "applied.student@example.com"));
+
+    const jobsRes = await adminAgent.get("/api/v1/admin/jobs").expect(200);
+    const listed = jobsRes.body.jobs.find((item) => String(item._id) === String(job._id));
+    assert.equal(listed.applicantCount, 1);
+});
+
