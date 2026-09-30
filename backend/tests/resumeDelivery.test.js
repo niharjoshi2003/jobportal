@@ -2,21 +2,25 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { resumeDownloadUrl, safeResumeFilename } from "../utils/resumeDelivery.js";
 
-test("raw cloudinary resume URL downloads with the original pdf name", () => {
-    const url = "https://res.cloudinary.com/demo/raw/upload/v1/job-o-hire/resumes/file_ehe7cx";
-    const next = resumeDownloadUrl(url, "nihar resume.pdf");
+test("pdf cloudinary URLs stay plain so the browser can open them", () => {
+    const url = "https://res.cloudinary.com/demo/raw/upload/v1/job-o-hire/resumes/Nihar_Joshi_Resume_517ff88f.pdf";
+    assert.equal(resumeDownloadUrl(url, "Nihar Joshi Resume.pdf"), url);
+});
+
+test("a dotted attachment flag is removed from an existing pdf URL", () => {
+    const url = "https://res.cloudinary.com/demo/raw/upload/fl_attachment:Nihar_Joshi_Resume.pdf/v1/job-o-hire/resumes/Nihar_Joshi_Resume_517ff88f.pdf";
     assert.equal(
-        next,
-        "https://res.cloudinary.com/demo/raw/upload/fl_attachment:nihar_resume.pdf/v1/job-o-hire/resumes/file_ehe7cx"
+        resumeDownloadUrl(url, "Nihar Joshi Resume.pdf"),
+        "https://res.cloudinary.com/demo/raw/upload/v1/job-o-hire/resumes/Nihar_Joshi_Resume_517ff88f.pdf"
     );
 });
 
-test("resume URL rewrite does not stack the attachment flag", () => {
-    const once = resumeDownloadUrl(
-        "https://res.cloudinary.com/demo/raw/upload/v1/job-o-hire/resumes/file_ehe7cx",
-        "nihar_resume.pdf"
+test("extensionless raw files get an attachment name without a dot", () => {
+    const url = "https://res.cloudinary.com/demo/raw/upload/v1/job-o-hire/resumes/file_ehe7cx";
+    assert.equal(
+        resumeDownloadUrl(url, "nihar resume.pdf"),
+        "https://res.cloudinary.com/demo/raw/upload/fl_attachment:nihar_resume/v1/job-o-hire/resumes/file_ehe7cx"
     );
-    assert.equal(resumeDownloadUrl(once, "nihar_resume.pdf"), once);
 });
 
 test("local upload paths are left unchanged", () => {

@@ -15,14 +15,17 @@ export const safeResumeFilename = (originalName = "", fallbackExt = ".pdf") => {
     return `${base}${ext}`;
 };
 
-// Cloudinary raw uploads from a buffer get a name like file_ehe7cx and no
-// extension, so the browser saves a file Windows cannot open. fl_attachment
-// sets the download name without changing the stored file.
+// A dot inside fl_attachment is parsed as a format flag. Cloudinary then
+// returns "Invalid flag in transformation: pdf", which the browser shows as
+// ERR_INVALID_RESPONSE. Files that already end in .pdf/.doc/.docx can be
+// opened from the plain URL.
 export const resumeDownloadUrl = (url, originalName = "") => {
-    const raw = String(url || "").trim();
-    if (!raw || raw.includes("/fl_attachment:") || !raw.includes("/raw/upload/")) return raw;
-    const filename = safeResumeFilename(originalName);
-    return raw.replace("/raw/upload/", `/raw/upload/fl_attachment:${filename}/`);
+    let raw = String(url || "").trim();
+    if (!raw || !raw.includes("/raw/upload/")) return raw;
+    raw = raw.replace(/\/fl_attachment:[^/]+\//, "/");
+    if (/\.(pdf|docx|doc)(?:$|\?)/i.test(raw)) return raw;
+    const base = safeResumeFilename(originalName).replace(/\.(pdf|docx|doc)$/i, "");
+    return raw.replace("/raw/upload/", `/raw/upload/fl_attachment:${base}/`);
 };
 
 export const rewriteProfileResumeUrls = (profile) => {
