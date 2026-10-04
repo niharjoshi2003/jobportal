@@ -111,6 +111,11 @@ const StudentProfileModal = ({ userId, open, onOpenChange }) => {
                                     <InfoRow icon={GraduationCap} label="College" value={applicant.college} />
                                     <InfoRow icon={Hash} label="Roll No" value={applicant.rollNumber} />
                                     <InfoRow icon={GraduationCap} label="Grad Year" value={applicant.graduationYear} />
+                                    <InfoRow icon={GraduationCap} label="Degree" value={applicant.degree} />
+                                    <InfoRow icon={GraduationCap} label="Department" value={applicant.department} />
+                                    <InfoRow icon={MapPin} label="City" value={applicant.city} />
+                                    <InfoRow icon={MapPin} label="Japanese" value={applicant.japaneseLevel} />
+                                    <InfoRow icon={MapPin} label="Preferred work" value={applicant.preferredWorkLocation} />
                                     <InfoRow icon={MapPin} label="Gender" value={applicant.gender} />
                                 </div>
                             </div>
@@ -127,6 +132,26 @@ const StudentProfileModal = ({ userId, open, onOpenChange }) => {
                                         >
                                             {s}
                                         </span>
+                                    ))}
+                                </div>
+                            </Section>
+                        )}
+
+                        {(applicant.profile?.certificates || []).length > 0 && (
+                            <Section title="Certificates">
+                                <div className="space-y-1.5">
+                                    {applicant.profile.certificates.map((cert, i) => (
+                                        <div key={`${cert.name}-${i}`} className="text-sm">
+                                            <p className="text-foreground">{cert.name}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {[cert.issuer, cert.category, cert.issuedOn].filter(Boolean).join(' · ')}
+                                            </p>
+                                            {cert.credentialUrl && (
+                                                <a href={cert.credentialUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+                                                    View credential <ExternalLink size={12} />
+                                                </a>
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
                             </Section>

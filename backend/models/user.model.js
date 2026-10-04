@@ -61,6 +61,66 @@ const userSchema = new mongoose.Schema({
     graduationYear: {
         type: Number
     },
+    // Tech Japan / Talendy-style enrollment fields used for Japan matching
+    dateOfBirth: {
+        type: Date
+    },
+    nationality: {
+        type: String,
+        default: ""
+    },
+    city: {
+        type: String,
+        default: ""
+    },
+    state: {
+        type: String,
+        default: ""
+    },
+    country: {
+        type: String,
+        default: ""
+    },
+    pincode: {
+        type: String,
+        default: ""
+    },
+    degree: {
+        type: String,
+        default: ""
+    },
+    department: {
+        type: String,
+        default: ""
+    },
+    currentSemester: {
+        type: String,
+        default: ""
+    },
+    cgpa: {
+        type: String,
+        default: ""
+    },
+    japaneseLevel: {
+        type: String,
+        default: ""
+    },
+    englishLevel: {
+        type: String,
+        default: ""
+    },
+    workExperience: {
+        type: String,
+        default: ""
+    },
+    preferredWorkLocation: {
+        type: String,
+        default: ""
+    },
+    willingToRelocate: {
+        type: String,
+        default: ""
+    },
     profile: {
         bio: { type: String },
         skills: [{ type: String }],
@@ -86,6 +146,19 @@ const userSchema = new mongoose.Schema({
             type: { type: String, enum: ['Portfolio', 'GitHub', 'LinkedIn', 'Others'], default: 'Others' },
             url: { type: String },
             label: { type: String }
+        }],
+        certificates: [{
+            name: { type: String, required: true },
+            issuer: { type: String, default: "" },
+            category: {
+                type: String,
+                enum: ['Language', 'Cloud', 'Programming', 'Academic', 'Professional', 'Other'],
+                default: 'Other'
+            },
+            credentialId: { type: String, default: "" },
+            credentialUrl: { type: String, default: "" },
+            issuedOn: { type: String, default: "" },
+            expiresOn: { type: String, default: "" },
         }],
         profileCompletion: {
             type: Number,
@@ -147,7 +220,7 @@ userSchema.set("toObject", { transform: presentResumeUrls });
 
 userSchema.methods.calculateProfileCompletion = function () {
     let score = 0;
-    const total = 10;
+    const total = 13;
     if (this.fullname) score++;
     if (this.email) score++;
     if (this.phoneNumber) score++;
@@ -158,6 +231,9 @@ userSchema.methods.calculateProfileCompletion = function () {
     if (this.profile?.introVideo?.url) score++;
     if (this.profile?.externalLinks?.length > 0) score++;
     if (this.gender) score++;
+    if (this.degree || this.department) score++;
+    if ((this.japaneseLevel && this.japaneseLevel !== "None") || this.englishLevel) score++;
+    if (this.profile?.certificates?.length > 0) score++;
     return Math.round((score / total) * 100);
 };
 

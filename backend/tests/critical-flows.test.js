@@ -408,3 +408,56 @@ test("admin can view a student profile and the job they applied to", async () =>
     assert.equal(listed.applicantCount, 1);
 });
 
+test("student enrollment fields are saved on register and profile update", async () => {
+    await request(app).post("/api/v1/user/register").send({
+        fullname: "Enrollment Student",
+        email: "enroll.student@example.com",
+        phoneNumber: "9876543210",
+        password: "EnrollPass123",
+        role: "student",
+        college: "IIT Madras",
+        rollNumber: "CS2024",
+        dateOfBirth: "2003-04-15",
+        degree: "B.Tech",
+        department: "Computer Science",
+        city: "Chennai",
+        japaneseLevel: "JLPT N5",
+    }).expect(201);
+
+    const student = await User.findOne({ email: "enroll.student@example.com" });
+    assert.equal(student.degree, "B.Tech");
+    assert.equal(student.department, "Computer Science");
+    assert.equal(student.city, "Chennai");
+    assert.equal(student.japaneseLevel, "JLPT N5");
+    student.status = "approved";
+    await student.save();
+
+    const agent = request.agent(app);
+    await agent.post("/api/v1/user/login").send({
+        email: "enroll.student@example.com",
+        password: "EnrollPass123",
+        role: "student",
+    }).expect(200);
+
+    const updateRes = await agent
+        .post("/api/v1/user/profile/update")
+        .field("englishLevel", "Fluent")
+        .field("preferredWorkLocation", "Japan (Onsite)")
+        .field("willingToRelocate", "Yes")
+        .field("cgpa", "8.7")
+        .field("certificates", JSON.stringify([
+            { name: "JLPT N5", issuer: "Japan Foundation / JEES", category: "Language", issuedOn: "2025-06" },
+            { name: "GATE", issuer: "IISc / IITs", category: "Academic", credentialId: "CS24X001" },
+        ]))
+        .expect(200);
+
+    assert.equal(updateRes.body.success, true);
+    assert.equal(updateRes.body.user.englishLevel, "Fluent");
+    assert.equal(updateRes.body.user.preferredWorkLocation, "Japan (Onsite)");
+    assert.equal(updateRes.body.user.willingToRelocate, "Yes");
+    assert.equal(updateRes.body.user.cgpa, "8.7");
+    assert.equal(updateRes.body.user.degree, "B.Tech");
+    assert.equal(updateRes.body.user.profile.certificates.length, 2);
+    assert.equal(updateRes.body.user.profile.certificates[0].name, "JLPT N5");
+});
+

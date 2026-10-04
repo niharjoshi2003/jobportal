@@ -32,6 +32,14 @@ async function seed() {
                 gender: "Male",
                 college: "IIT Delhi",
                 graduationYear: 2027,
+                degree: "B.Tech",
+                department: "Computer Science",
+                city: "Delhi",
+                nationality: "Indian",
+                japaneseLevel: "Beginner",
+                englishLevel: "Fluent",
+                preferredWorkLocation: "Either",
+                willingToRelocate: "Yes",
                 profile: {
                     bio: "Aspiring software engineer passionate about full-stack development",
                     skills: ["React", "Node.js", "Python", "JavaScript"],
@@ -41,6 +49,10 @@ async function seed() {
                     externalLinks: [
                         { type: "GitHub", url: "https://github.com/nihar", label: "GitHub" },
                         { type: "LinkedIn", url: "https://linkedin.com/in/nihar", label: "LinkedIn" }
+                    ],
+                    certificates: [
+                        { name: "JLPT N5", issuer: "Japan Foundation / JEES", category: "Language", issuedOn: "2025-06" },
+                        { name: "AWS Certified Cloud Practitioner", issuer: "Amazon Web Services", category: "Cloud", issuedOn: "2025-01" }
                     ]
                 }
             });

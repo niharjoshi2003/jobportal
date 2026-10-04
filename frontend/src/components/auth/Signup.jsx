@@ -13,6 +13,10 @@ import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import PrivacyContent from '../legal/PrivacyContent';
 import BrandLogo from '../shared/BrandLogo';
+import {
+    DEGREE_OPTIONS,
+    JAPANESE_LEVEL_OPTIONS,
+} from '@/utils/constant';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^\d{10}$/;
@@ -20,7 +24,8 @@ const phoneRegex = /^\d{10}$/;
 const Signup = () => {
     const [input, setInput] = useState({
         fullname: "", email: "", phoneNumber: "", password: "",
-        role: "", adminCode: "", college: "", rollNumber: "", file: ""
+        role: "", adminCode: "", college: "", rollNumber: "", file: "",
+        dateOfBirth: "", degree: "", department: "", city: "", japaneseLevel: ""
     });
     const [errors, setErrors] = useState({});
     const [agreed, setAgreed] = useState(false);
@@ -76,6 +81,11 @@ const Signup = () => {
         if (input.role === 'student') {
             formData.append("college", input.college);
             formData.append("rollNumber", input.rollNumber);
+            if (input.dateOfBirth) formData.append("dateOfBirth", input.dateOfBirth);
+            if (input.degree) formData.append("degree", input.degree);
+            if (input.department) formData.append("department", input.department);
+            if (input.city) formData.append("city", input.city);
+            if (input.japaneseLevel) formData.append("japaneseLevel", input.japaneseLevel);
         }
         if (input.role === 'admin' && input.adminCode) formData.append("adminCode", input.adminCode);
         if (input.file) formData.append("file", input.file);
@@ -201,6 +211,44 @@ const Signup = () => {
                                         placeholder="e.g. 2023CS1234"
                                         className="mt-1 bg-white/5 border-border text-foreground" />
                                     {errors.rollNumber && <p className="text-xs text-red-400 mt-1">{errors.rollNumber}</p>}
+                                </div>
+                                <div>
+                                    <Label className="text-foreground text-sm">Date of Birth</Label>
+                                    <Input type="date" name="dateOfBirth" value={input.dateOfBirth} onChange={changeEventHandler}
+                                        className="mt-1 bg-white/5 border-border text-foreground" />
+                                </div>
+                                <div>
+                                    <Label className="text-foreground text-sm">Degree</Label>
+                                    <select name="degree" value={input.degree} onChange={changeEventHandler}
+                                        className="mt-1 w-full bg-white/5 border border-border rounded-md px-3 py-2 text-sm text-foreground">
+                                        <option value="">Select degree</option>
+                                        {DEGREE_OPTIONS.map((degree) => (
+                                            <option key={degree} value={degree}>{degree}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <Label className="text-foreground text-sm">Department / Branch</Label>
+                                    <Input type="text" name="department" value={input.department} onChange={changeEventHandler}
+                                        placeholder="e.g. Computer Science"
+                                        className="mt-1 bg-white/5 border-border text-foreground" />
+                                </div>
+                                <div>
+                                    <Label className="text-foreground text-sm">City</Label>
+                                    <Input type="text" name="city" value={input.city} onChange={changeEventHandler}
+                                        placeholder="e.g. Delhi"
+                                        className="mt-1 bg-white/5 border-border text-foreground" />
+                                </div>
+                                <div>
+                                    <Label className="text-foreground text-sm">Japanese language level</Label>
+                                    <select name="japaneseLevel" value={input.japaneseLevel} onChange={changeEventHandler}
+                                        className="mt-1 w-full bg-white/5 border border-border rounded-md px-3 py-2 text-sm text-foreground">
+                                        <option value="">Select level</option>
+                                        {JAPANESE_LEVEL_OPTIONS.map((level) => (
+                                            <option key={level} value={level}>{level}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-muted-foreground mt-1">Optional. You can complete remaining details on your profile after approval.</p>
                                 </div>
                                 <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
                                     <p className="text-xs text-amber-300">

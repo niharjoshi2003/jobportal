@@ -135,7 +135,11 @@ const RecruiterTalentPool = () => {
                                                 {student.college || 'College not provided'}
                                             </p>
                                             <p className="text-xs text-muted-foreground mt-1">
+                                                {[student.degree, student.department].filter(Boolean).join(' · ') || 'Program not provided'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-1">
                                                 Graduation: {student.graduationYear || 'Not provided'}
+                                                {student.japaneseLevel ? ` · Japanese: ${student.japaneseLevel}` : ''}
                                             </p>
                                         </div>
                                     </div>
@@ -196,6 +200,10 @@ const RecruiterTalentPool = () => {
                                         {profileInfo(GraduationCap, 'College', selectedStudent.college)}
                                         {profileInfo(Hash, 'Roll No.', selectedStudent.maskedRollNumber)}
                                         {profileInfo(GraduationCap, 'Grad Year', selectedStudent.graduationYear)}
+                                        {profileInfo(GraduationCap, 'Degree', selectedStudent.degree)}
+                                        {profileInfo(GraduationCap, 'Department', selectedStudent.department)}
+                                        {profileInfo(GraduationCap, 'Japanese', selectedStudent.japaneseLevel)}
+                                        {profileInfo(GraduationCap, 'Preferred work', selectedStudent.preferredWorkLocation)}
                                     </div>
                                 </div>
                             </div>

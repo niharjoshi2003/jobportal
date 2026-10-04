@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
     Camera, Mail, Phone, User, Pen, Plus, X, Upload, FileText,
-    Link as LinkIcon, Video, Github, Linkedin, Globe, ChevronDown, ChevronUp
+    Link as LinkIcon, Video, Github, Linkedin, Globe, ChevronDown, ChevronUp, Award
 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarImage } from '../ui/avatar';
@@ -13,6 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import axios from 'axios';
 import { USER_API_END_POINT } from '@/utils/constant';
 import { PREDEFINED_SKILLS } from '@/utils/constant';
+import {
+    DEGREE_OPTIONS,
+    JAPANESE_LEVEL_OPTIONS,
+    ENGLISH_LEVEL_OPTIONS,
+    WORK_LOCATION_OPTIONS,
+    RELOCATE_OPTIONS,
+    CERTIFICATE_CATEGORIES,
+    COMMON_CERTIFICATES,
+} from '@/utils/constant';
 import { setUser } from '@/redux/authSlice';
 import { toast } from 'sonner';
 import useGetAppliedJobs from '@/hooks/useGetAppliedJobs';
@@ -38,6 +47,55 @@ const SectionCard = ({ title, children, onEdit, defaultOpen = true }) => {
     );
 };
 
+const toDateInput = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+};
+
+const buildEditForm = (user) => ({
+    fullname: user?.fullname || '',
+    email: user?.email || '',
+    phoneNumber: user?.phoneNumber || '',
+    personalEmail: user?.personalEmail || '',
+    bio: user?.profile?.bio || '',
+    gender: user?.gender || '',
+    college: user?.college || '',
+    graduationYear: user?.graduationYear || '',
+    dateOfBirth: toDateInput(user?.dateOfBirth),
+    nationality: user?.nationality || '',
+    city: user?.city || '',
+    state: user?.state || '',
+    country: user?.country || '',
+    pincode: user?.pincode || '',
+    degree: user?.degree || '',
+    department: user?.department || '',
+    currentSemester: user?.currentSemester || '',
+    cgpa: user?.cgpa || '',
+    japaneseLevel: user?.japaneseLevel || '',
+    englishLevel: user?.englishLevel || '',
+    workExperience: user?.workExperience || '',
+    preferredWorkLocation: user?.preferredWorkLocation || '',
+    willingToRelocate: user?.willingToRelocate || '',
+});
+
+const SelectField = ({ label, value, onChange, options, placeholder = 'Select' }) => (
+    <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-3">
+        <Label className="sm:text-right text-xs">{label}</Label>
+        <select
+            value={value}
+            onChange={onChange}
+            className="sm:col-span-3 bg-white/5 border border-border rounded-md px-3 py-2 text-sm text-foreground"
+        >
+            <option value="">{placeholder}</option>
+            {options.map((option) => (
+                <option key={option} value={option}>{option}</option>
+            ))}
+        </select>
+    </div>
+);
+
 const ProfilePage = () => {
     useGetAppliedJobs();
     const dispatch = useDispatch();
@@ -46,26 +104,23 @@ const ProfilePage = () => {
     const [skillsEditOpen, setSkillsEditOpen] = useState(false);
     const [resumeUploadOpen, setResumeUploadOpen] = useState(false);
     const [linksEditOpen, setLinksEditOpen] = useState(false);
+    const [certsEditOpen, setCertsEditOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [resumeUploading, setResumeUploading] = useState(false);
     const [customSkillInput, setCustomSkillInput] = useState('');
 
-    const [editForm, setEditForm] = useState({
-        fullname: user?.fullname || '',
-        email: user?.email || '',
-        phoneNumber: user?.phoneNumber || '',
-        personalEmail: user?.personalEmail || '',
-        bio: user?.profile?.bio || '',
-        gender: user?.gender || '',
-        college: user?.college || '',
-        graduationYear: user?.graduationYear || ''
-    });
+    const [editForm, setEditForm] = useState(() => buildEditForm(user));
 
     const [selectedSkills, setSelectedSkills] = useState(user?.profile?.skills || []);
     const [customSkills, setCustomSkills] = useState(user?.profile?.customSkills || []);
 
     const [links, setLinks] = useState(user?.profile?.externalLinks || []);
     const [newLink, setNewLink] = useState({ type: 'Others', url: '', label: '' });
+    const [certificates, setCertificates] = useState(user?.profile?.certificates || []);
+    const emptyCertificate = {
+        name: '', issuer: '', category: 'Other', credentialId: '', credentialUrl: '', issuedOn: '', expiresOn: ''
+    };
+    const [newCertificate, setNewCertificate] = useState(emptyCertificate);
 
     const completion = user?.profile?.profileCompletion || 0;
 
@@ -195,6 +250,27 @@ const ProfilePage = () => {
         }
     };
 
+    const handleCertificatesUpdate = async () => {
+        try {
+            setLoading(true);
+            const formData = new FormData();
+            formData.append('certificates', JSON.stringify(certificates));
+            const res = await axios.post(`${USER_API_END_POINT}/profile/update`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                withCredentials: true
+            });
+            if (res.data.success) {
+                dispatch(setUser(res.data.user));
+                toast.success('Certificates updated');
+                setCertsEditOpen(false);
+            }
+        } catch (error) {
+            toast.error('Failed to update certificates');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const addCustomSkill = () => {
         if (customSkillInput.trim() && !customSkills.includes(customSkillInput.trim())) {
             setCustomSkills([...customSkills, customSkillInput.trim()]);
@@ -239,7 +315,7 @@ const ProfilePage = () => {
                                 {user?.profile?.bio && <p className="text-sm text-muted-foreground mt-0.5">{user.profile.bio}</p>}
                                 {user?.college && <p className="text-xs text-muted-foreground mt-1">{user.college}</p>}
                             </div>
-                            <Button onClick={() => setEditOpen(true)} variant="outline" size="sm" className="bg-white/5 border-border text-foreground hover:bg-white/10">
+                            <Button onClick={() => { setEditForm(buildEditForm(user)); setEditOpen(true); }} variant="outline" size="sm" className="bg-white/5 border-border text-foreground hover:bg-white/10">
                                 <Pen size={14} className="mr-1.5" />Edit
                             </Button>
                         </div>
@@ -251,6 +327,56 @@ const ProfilePage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Education, location, languages */}
+            <SectionCard title="Education & Japan readiness">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <p><span className="text-muted-foreground">Degree:</span> {user?.degree || '—'}</p>
+                    <p><span className="text-muted-foreground">Department:</span> {user?.department || '—'}</p>
+                    <p><span className="text-muted-foreground">Semester:</span> {user?.currentSemester || '—'}</p>
+                    <p><span className="text-muted-foreground">CGPA:</span> {user?.cgpa || '—'}</p>
+                    <p><span className="text-muted-foreground">Date of birth:</span> {user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : '—'}</p>
+                    <p><span className="text-muted-foreground">Nationality:</span> {user?.nationality || '—'}</p>
+                    <p><span className="text-muted-foreground">City / State:</span> {[user?.city, user?.state].filter(Boolean).join(', ') || '—'}</p>
+                    <p><span className="text-muted-foreground">Country:</span> {user?.country || '—'}</p>
+                    <p><span className="text-muted-foreground">Japanese:</span> {user?.japaneseLevel || '—'}</p>
+                    <p><span className="text-muted-foreground">English:</span> {user?.englishLevel || '—'}</p>
+                    <p><span className="text-muted-foreground">Preferred work:</span> {user?.preferredWorkLocation || '—'}</p>
+                    <p><span className="text-muted-foreground">Willing to relocate:</span> {user?.willingToRelocate || '—'}</p>
+                </div>
+                {user?.workExperience && (
+                    <p className="text-sm text-muted-foreground mt-3 whitespace-pre-wrap">{user.workExperience}</p>
+                )}
+            </SectionCard>
+
+            {/* Certificates */}
+            <SectionCard title="Certificates & qualifications" onEdit={() => {
+                setCertificates(user?.profile?.certificates || []);
+                setCertsEditOpen(true);
+            }}>
+                {user?.profile?.certificates?.length > 0 ? (
+                    <div className="space-y-2">
+                        {user.profile.certificates.map((cert, i) => (
+                            <div key={`${cert.name}-${i}`} className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                                <Award size={16} className="text-primary mt-0.5 shrink-0" />
+                                <div className="min-w-0">
+                                    <p className="text-sm text-foreground">{cert.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {[cert.issuer, cert.category, cert.issuedOn].filter(Boolean).join(' · ')}
+                                    </p>
+                                    {cert.credentialUrl && (
+                                        <a href={cert.credentialUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                                            View credential
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">Add JLPT, TOEIC, GATE, AWS, or other job-relevant certificates.</p>
+                )}
+            </SectionCard>
 
             {/* Skills Section */}
             <SectionCard title="Skills" onEdit={() => setSkillsEditOpen(true)}>
@@ -360,6 +486,7 @@ const ProfilePage = () => {
                     <DialogHeader><DialogTitle>Edit Profile</DialogTitle></DialogHeader>
                     <form onSubmit={handleProfileUpdate}>
                         <div className="grid gap-3 py-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin">
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">Basic details</p>
                             {[
                                 { id: 'fullname', label: 'Full Name', type: 'text' },
                                 { id: 'email', label: 'College Email', type: 'email' },
@@ -368,6 +495,8 @@ const ProfilePage = () => {
                                 { id: 'bio', label: 'Bio', type: 'text' },
                                 { id: 'college', label: 'College', type: 'text' },
                                 { id: 'graduationYear', label: 'Graduation Year', type: 'number' },
+                                { id: 'dateOfBirth', label: 'Date of Birth', type: 'date' },
+                                { id: 'nationality', label: 'Nationality', type: 'text' },
                             ].map(field => (
                                 <div key={field.id} className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-3">
                                     <Label htmlFor={field.id} className="sm:text-right text-xs">{field.label}</Label>
@@ -386,6 +515,80 @@ const ProfilePage = () => {
                                     <option value="Female">Female</option>
                                     <option value="Not Confirmed">Not Confirmed</option>
                                 </select>
+                            </div>
+
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground pt-2">Education</p>
+                            <SelectField
+                                label="Degree"
+                                value={editForm.degree}
+                                options={DEGREE_OPTIONS}
+                                onChange={e => setEditForm({ ...editForm, degree: e.target.value })}
+                            />
+                            {[
+                                { id: 'department', label: 'Department / Branch', type: 'text' },
+                                { id: 'currentSemester', label: 'Current Semester', type: 'text' },
+                                { id: 'cgpa', label: 'CGPA / Percentage', type: 'text' },
+                            ].map(field => (
+                                <div key={field.id} className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-3">
+                                    <Label htmlFor={field.id} className="sm:text-right text-xs">{field.label}</Label>
+                                    <Input id={field.id} name={field.id} type={field.type}
+                                        value={editForm[field.id]}
+                                        onChange={e => setEditForm({ ...editForm, [field.id]: e.target.value })}
+                                        className="sm:col-span-3 bg-white/5 border-border" />
+                                </div>
+                            ))}
+
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground pt-2">Address</p>
+                            {[
+                                { id: 'city', label: 'City', type: 'text' },
+                                { id: 'state', label: 'State', type: 'text' },
+                                { id: 'country', label: 'Country', type: 'text' },
+                                { id: 'pincode', label: 'Pincode', type: 'text' },
+                            ].map(field => (
+                                <div key={field.id} className="grid grid-cols-1 sm:grid-cols-4 items-center gap-2 sm:gap-3">
+                                    <Label htmlFor={field.id} className="sm:text-right text-xs">{field.label}</Label>
+                                    <Input id={field.id} name={field.id} type={field.type}
+                                        value={editForm[field.id]}
+                                        onChange={e => setEditForm({ ...editForm, [field.id]: e.target.value })}
+                                        className="sm:col-span-3 bg-white/5 border-border" />
+                                </div>
+                            ))}
+
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground pt-2">Languages & Japan preference</p>
+                            <SelectField
+                                label="Japanese"
+                                value={editForm.japaneseLevel}
+                                options={JAPANESE_LEVEL_OPTIONS}
+                                onChange={e => setEditForm({ ...editForm, japaneseLevel: e.target.value })}
+                            />
+                            <SelectField
+                                label="English"
+                                value={editForm.englishLevel}
+                                options={ENGLISH_LEVEL_OPTIONS}
+                                onChange={e => setEditForm({ ...editForm, englishLevel: e.target.value })}
+                            />
+                            <SelectField
+                                label="Preferred work"
+                                value={editForm.preferredWorkLocation}
+                                options={WORK_LOCATION_OPTIONS}
+                                onChange={e => setEditForm({ ...editForm, preferredWorkLocation: e.target.value })}
+                            />
+                            <SelectField
+                                label="Relocate to Japan"
+                                value={editForm.willingToRelocate}
+                                options={RELOCATE_OPTIONS}
+                                onChange={e => setEditForm({ ...editForm, willingToRelocate: e.target.value })}
+                            />
+                            <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-3">
+                                <Label htmlFor="workExperience" className="sm:text-right text-xs mt-2">Work / internship experience</Label>
+                                <textarea
+                                    id="workExperience"
+                                    value={editForm.workExperience}
+                                    onChange={e => setEditForm({ ...editForm, workExperience: e.target.value })}
+                                    rows={3}
+                                    placeholder="Company, role, duration, and what you worked on"
+                                    className="sm:col-span-3 bg-white/5 border border-border rounded-md px-3 py-2 text-sm text-foreground"
+                                />
                             </div>
                         </div>
                         <DialogFooter>
@@ -514,6 +717,78 @@ const ProfilePage = () => {
                     <DialogFooter>
                         <Button onClick={handleLinksUpdate} disabled={loading} className="w-full bg-primary hover:bg-primary/90">
                             {loading ? 'Saving...' : 'Save Links'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Certificates Dialog */}
+            <Dialog open={certsEditOpen} onOpenChange={setCertsEditOpen}>
+                <DialogContent className="sm:max-w-lg bg-card border-border text-foreground">
+                    <DialogHeader><DialogTitle>Certificates & qualifications</DialogTitle></DialogHeader>
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin">
+                        <p className="text-xs text-muted-foreground">
+                            Japanese recruiters commonly look for JLPT, English tests, GATE, and cloud certifications.
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {COMMON_CERTIFICATES.map((preset) => (
+                                <button
+                                    key={preset.name}
+                                    type="button"
+                                    onClick={() => setNewCertificate({ ...emptyCertificate, ...preset })}
+                                    className="px-2 py-1 rounded-lg text-[11px] bg-white/5 text-muted-foreground hover:bg-white/10"
+                                >
+                                    {preset.name}
+                                </button>
+                            ))}
+                        </div>
+                        {certificates.map((cert, i) => (
+                            <div key={`${cert.name}-${i}`} className="flex items-start gap-2 p-2 rounded-lg bg-white/5">
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs text-foreground">{cert.name}</p>
+                                    <p className="text-[11px] text-muted-foreground truncate">
+                                        {[cert.issuer, cert.category].filter(Boolean).join(' · ')}
+                                    </p>
+                                </div>
+                                <button onClick={() => setCertificates(certificates.filter((_, idx) => idx !== i))}>
+                                    <X size={12} className="text-muted-foreground hover:text-red-400" />
+                                </button>
+                            </div>
+                        ))}
+                        <div className="grid gap-2">
+                            <Input value={newCertificate.name} onChange={e => setNewCertificate({ ...newCertificate, name: e.target.value })}
+                                placeholder="Certificate name" className="bg-white/5 border-border text-sm" />
+                            <Input value={newCertificate.issuer} onChange={e => setNewCertificate({ ...newCertificate, issuer: e.target.value })}
+                                placeholder="Issuer (e.g. AWS, Japan Foundation)" className="bg-white/5 border-border text-sm" />
+                            <select value={newCertificate.category} onChange={e => setNewCertificate({ ...newCertificate, category: e.target.value })}
+                                className="bg-white/5 border border-border rounded-md px-3 py-2 text-sm text-foreground">
+                                {CERTIFICATE_CATEGORIES.map((category) => (
+                                    <option key={category} value={category}>{category}</option>
+                                ))}
+                            </select>
+                            <Input value={newCertificate.credentialId} onChange={e => setNewCertificate({ ...newCertificate, credentialId: e.target.value })}
+                                placeholder="Credential ID (optional)" className="bg-white/5 border-border text-sm" />
+                            <Input value={newCertificate.credentialUrl} onChange={e => setNewCertificate({ ...newCertificate, credentialUrl: e.target.value })}
+                                placeholder="Credential URL (optional)" className="bg-white/5 border-border text-sm" />
+                            <div className="grid grid-cols-2 gap-2">
+                                <Input type="month" value={newCertificate.issuedOn} onChange={e => setNewCertificate({ ...newCertificate, issuedOn: e.target.value })}
+                                    className="bg-white/5 border-border text-sm" />
+                                <Input type="month" value={newCertificate.expiresOn} onChange={e => setNewCertificate({ ...newCertificate, expiresOn: e.target.value })}
+                                    className="bg-white/5 border-border text-sm" />
+                            </div>
+                            <Button type="button" onClick={() => {
+                                if (newCertificate.name.trim()) {
+                                    setCertificates([...certificates, { ...newCertificate, name: newCertificate.name.trim() }]);
+                                    setNewCertificate(emptyCertificate);
+                                }
+                            }} variant="outline" size="sm" className="bg-white/5 border-border">
+                                <Plus size={14} className="mr-1" />Add certificate
+                            </Button>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={handleCertificatesUpdate} disabled={loading} className="w-full bg-primary hover:bg-primary/90">
+                            {loading ? 'Saving...' : 'Save certificates'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

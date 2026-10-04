@@ -41,3 +41,42 @@ export const PREDEFINED_SKILLS = [
     "DevOps",
     "UI/UX Design"
 ];
+
+export const DEGREE_OPTIONS = [
+    "B.Tech", "B.E.", "M.Tech", "M.E.", "B.Sc", "M.Sc", "MBA", "PhD", "Diploma", "Other"
+];
+
+export const JAPANESE_LEVEL_OPTIONS = [
+    "None", "Beginner", "JLPT N5", "JLPT N4", "JLPT N3", "JLPT N2", "JLPT N1"
+];
+
+export const ENGLISH_LEVEL_OPTIONS = [
+    "Basic", "Intermediate", "Fluent", "Native"
+];
+
+export const WORK_LOCATION_OPTIONS = [
+    "Japan (Onsite)", "India (Remote)", "Hybrid", "Either"
+];
+
+export const RELOCATE_OPTIONS = ["Yes", "No"];
+
+export const CERTIFICATE_CATEGORIES = [
+    "Language", "Cloud", "Programming", "Academic", "Professional", "Other"
+];
+
+export const COMMON_CERTIFICATES = [
+    { name: "JLPT N5", issuer: "Japan Foundation / JEES", category: "Language" },
+    { name: "JLPT N4", issuer: "Japan Foundation / JEES", category: "Language" },
+    { name: "JLPT N3", issuer: "Japan Foundation / JEES", category: "Language" },
+    { name: "JLPT N2", issuer: "Japan Foundation / JEES", category: "Language" },
+    { name: "JLPT N1", issuer: "Japan Foundation / JEES", category: "Language" },
+    { name: "TOEIC", issuer: "ETS", category: "Language" },
+    { name: "IELTS", issuer: "British Council / IDP", category: "Language" },
+    { name: "TOEFL iBT", issuer: "ETS", category: "Language" },
+    { name: "GATE", issuer: "IISc / IITs", category: "Academic" },
+    { name: "AWS Certified Cloud Practitioner", issuer: "Amazon Web Services", category: "Cloud" },
+    { name: "AWS Solutions Architect Associate", issuer: "Amazon Web Services", category: "Cloud" },
+    { name: "Google Cloud Associate Engineer", issuer: "Google Cloud", category: "Cloud" },
+    { name: "Microsoft Azure Fundamentals (AZ-900)", issuer: "Microsoft", category: "Cloud" },
+    { name: "Oracle Certified Java Programmer", issuer: "Oracle", category: "Programming" },
+];

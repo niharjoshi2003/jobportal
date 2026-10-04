@@ -92,6 +92,34 @@ const uploadResumeFile = async (req, file) => {
     }
 };
 
+const ENROLLMENT_STRING_FIELDS = [
+    "nationality", "city", "state", "country", "pincode",
+    "degree", "department", "currentSemester", "cgpa",
+    "japaneseLevel", "englishLevel", "workExperience",
+    "preferredWorkLocation", "willingToRelocate",
+];
+
+const pickEnrollmentFields = (user = {}) => (
+    ENROLLMENT_STRING_FIELDS.reduce((acc, key) => {
+        acc[key] = user[key] || "";
+        return acc;
+    }, {
+        dateOfBirth: user.dateOfBirth || null,
+    })
+);
+
+const applyEnrollmentFields = (user, body = {}) => {
+    for (const key of ENROLLMENT_STRING_FIELDS) {
+        if (body[key] === undefined || body[key] === null) continue;
+        const value = String(body[key]).trim();
+        if (value) user[key] = value;
+    }
+    if (body.dateOfBirth) {
+        const parsed = new Date(body.dateOfBirth);
+        if (!Number.isNaN(parsed.getTime())) user.dateOfBirth = parsed;
+    }
+};
+
 export const toPublicUser = (user) => ({
     _id: user._id,
     fullname: user.fullname,
@@ -104,6 +132,7 @@ export const toPublicUser = (user) => ({
     status: user.status,
     personalEmail: user.personalEmail,
     graduationYear: user.graduationYear,
+    ...pickEnrollmentFields(user),
     profile: rewriteProfileResumeUrls(
         user.profile?.toObject ? user.profile.toObject() : user.profile
     ),
@@ -149,7 +178,7 @@ export const getRecruiterTalentPool = async (req, res) => {
         const [totalStudents, students] = await Promise.all([
             User.countDocuments({ role: "student", status: "approved" }),
             User.find(query)
-                .select("fullname email phoneNumber college rollNumber graduationYear gender profile.bio profile.skills profile.customSkills profile.profilePhoto profile.profileCompletion")
+                .select("fullname email phoneNumber college rollNumber graduationYear gender degree department city japaneseLevel preferredWorkLocation profile.bio profile.skills profile.customSkills profile.profilePhoto profile.profileCompletion")
                 .sort({ "profile.profileCompletion": -1, createdAt: -1 })
                 .limit(200)
                 .lean(),
@@ -167,6 +196,11 @@ export const getRecruiterTalentPool = async (req, res) => {
                 college: student.college,
                 graduationYear: student.graduationYear,
                 gender: student.gender,
+                degree: student.degree,
+                department: student.department,
+                city: student.city,
+                japaneseLevel: student.japaneseLevel,
+                preferredWorkLocation: student.preferredWorkLocation,
                 profile: {
                     bio: student.profile?.bio || "",
                     skills: student.profile?.skills || [],
@@ -261,7 +295,7 @@ export const register = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        await User.create({
+        const createdUser = {
             fullname,
             email: normalizedEmail,
             phoneNumber: Number(phoneStr),
@@ -273,7 +307,10 @@ export const register = async (req, res) => {
             profile: {
                 profilePhoto: profilePhotoUrl,
             }
-        });
+        };
+        if (role === 'student') applyEnrollmentFields(createdUser, req.body);
+
+        await User.create(createdUser);
 
         const successMessage = role === 'student'
             ? "Account created. Awaiting admin approval before you can log in."
@@ -534,9 +571,28 @@ export const updateProfile = async (req, res) => {
         if (personalEmail) user.personalEmail = personalEmail;
         if (college) user.college = college;
         if (graduationYear) user.graduationYear = graduationYear;
+        applyEnrollmentFields(user, req.body);
         if (externalLinks) {
             try {
                 user.profile.externalLinks = JSON.parse(externalLinks);
+            } catch (e) { /* ignore parse errors */ }
+        }
+        if (req.body.certificates) {
+            try {
+                const parsed = JSON.parse(req.body.certificates);
+                const allowed = ['Language', 'Cloud', 'Programming', 'Academic', 'Professional', 'Other'];
+                user.profile.certificates = (Array.isArray(parsed) ? parsed : [])
+                    .filter((item) => item && String(item.name || "").trim())
+                    .slice(0, 20)
+                    .map((item) => ({
+                        name: String(item.name).trim(),
+                        issuer: String(item.issuer || "").trim(),
+                        category: allowed.includes(item.category) ? item.category : "Other",
+                        credentialId: String(item.credentialId || "").trim(),
+                        credentialUrl: String(item.credentialUrl || "").trim(),
+                        issuedOn: String(item.issuedOn || "").trim(),
+                        expiresOn: String(item.expiresOn || "").trim(),
+                    }));
             } catch (e) { /* ignore parse errors */ }
         }
 
@@ -548,21 +604,11 @@ export const updateProfile = async (req, res) => {
         user.profile.profileCompletion = user.calculateProfileCompletion();
         await user.save();
 
-        user = {
-            _id: user._id,
-            fullname: user.fullname,
-            email: user.email,
-            phoneNumber: user.phoneNumber,
-            role: user.role,
-            gender: user.gender,
-            college: user.college,
-            personalEmail: user.personalEmail,
-            graduationYear: user.graduationYear,
-            profile: user.profile,
-            bookmarkedJobs: user.bookmarkedJobs,
-        };
-
-        return res.status(200).json({ message: "Profile updated successfully.", user, success: true });
+        return res.status(200).json({
+            message: "Profile updated successfully.",
+            user: toPublicUser(user),
+            success: true,
+        });
     } catch (error) {
         logControllerError("user_handler_failed", error, req);
         return res.status(500).json({ message: "Server error", success: false });
