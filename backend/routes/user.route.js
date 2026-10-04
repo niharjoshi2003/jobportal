@@ -2,9 +2,10 @@ import express from "express";
 import {
     login, logout, register, getMe, updateProfile, updateProfilePhoto,
     addResume, deleteResume, getNotifications, markNotificationRead,
-    getDashboardStats, forgotPassword, resetPassword
+    getDashboardStats, forgotPassword, resetPassword, getRecruiterTalentPool
 } from "../controllers/user.controller.js";
 import isAuthenticated from "../middlewares/isAuthenticated.js";
+import authorize from "../middlewares/authorize.js";
 import { singleUpload } from "../middlewares/mutler.js";
 
 const router = express.Router();
@@ -15,6 +16,11 @@ router.route("/forgot-password").post(forgotPassword);
 router.route("/reset-password").post(resetPassword);
 router.route("/logout").get(logout);
 router.route("/me").get(isAuthenticated, getMe);
+router.route("/recruiter/talent-pool").get(
+    isAuthenticated,
+    authorize("recruiter"),
+    getRecruiterTalentPool
+);
 router.route("/profile/update").post(isAuthenticated, singleUpload, updateProfile);
 router.route("/profile/photo").post(isAuthenticated, singleUpload, updateProfilePhoto);
 router.route("/profile/resume").post(isAuthenticated, singleUpload, addResume);

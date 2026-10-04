@@ -67,6 +67,7 @@ const StudentProfileModal = ({ userId, open, onOpenChange }) => {
 
     const applicant = data?.applicant;
     const applications = data?.applications || [];
+    const internshipApplications = data?.internshipApplications || [];
     const skills = [
         ...(applicant?.profile?.skills || []),
         ...(applicant?.profile?.customSkills || []),
@@ -203,6 +204,9 @@ const StudentProfileModal = ({ userId, open, onOpenChange }) => {
                         {/* Applications to this company */}
                         <Section title={`Applications to your company (${applications.length})`}>
                             <div className="space-y-1.5">
+                                {applications.length === 0 && (
+                                    <p className="text-sm text-muted-foreground">No job applications.</p>
+                                )}
                                 {applications.map((a) => (
                                     <div
                                         key={a._id}
@@ -236,6 +240,39 @@ const StudentProfileModal = ({ userId, open, onOpenChange }) => {
                                                 No custom question answers submitted for this application.
                                             </div>
                                         )}
+                                    </div>
+                                ))}
+                            </div>
+                        </Section>
+
+                        <Section title={`Internship applications to your company (${internshipApplications.length})`}>
+                            <div className="space-y-1.5">
+                                {internshipApplications.length === 0 && (
+                                    <p className="text-sm text-muted-foreground">No internship applications.</p>
+                                )}
+                                {internshipApplications.map((application) => (
+                                    <div
+                                        key={application._id}
+                                        className="p-2.5 rounded-lg bg-white/5 border border-border text-sm"
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <div className="text-foreground font-medium">
+                                                    {application.internship?.title || 'Unknown internship'}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {application.internship?.location}
+                                                    {application.internship?.locationType
+                                                        ? ` · ${application.internship.locationType}`
+                                                        : ''}
+                                                    {' · Applied '}
+                                                    {new Date(application.createdAt).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                            <span className={`text-xs px-2 py-1 rounded-md capitalize ${statusBadgeClass(application.status)}`}>
+                                                {application.status}
+                                            </span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

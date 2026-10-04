@@ -2,6 +2,8 @@ import { Application } from "../models/application.model.js";
 import { Job } from "../models/job.model.js";
 import { Company } from "../models/company.model.js";
 import { User } from "../models/user.model.js";
+import { Internship } from "../models/internship.model.js";
+import { InternshipApplication } from "../models/internshipApplication.model.js";
 import mongoose from "mongoose";
 import { logControllerError } from "../utils/controllerError.js";
 
@@ -286,8 +288,8 @@ export const getRecruiterJobs = async (req, res) => {
     }
 };
 
-// Recruiter-only: fetch full profile of a student, but ONLY if that student
-// has applied to at least one job belonging to the recruiter's company.
+// Recruiter-only: fetch a student profile only after they have applied to a
+// job or internship belonging to the recruiter's company.
 export const getRecruiterApplicantProfile = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -305,14 +307,22 @@ export const getRecruiterApplicantProfile = async (req, res) => {
 
         const jobs = await Job.find({ company: company._id }).select('_id title');
         const jobIds = jobs.map((j) => j._id);
+        const internships = await Internship.find({ company: company._id }).select('_id title');
+        const internshipIds = internships.map((internship) => internship._id);
 
-        const hasApplied = await Application.exists({
-            job: { $in: jobIds },
-            applicant: userId,
-        });
-        if (!hasApplied) {
+        const [hasAppliedToJob, hasAppliedToInternship] = await Promise.all([
+            Application.exists({
+                job: { $in: jobIds },
+                applicant: userId,
+            }),
+            InternshipApplication.exists({
+                internship: { $in: internshipIds },
+                applicant: userId,
+            }),
+        ]);
+        if (!hasAppliedToJob && !hasAppliedToInternship) {
             return res.status(403).json({
-                message: "This applicant has not applied to any of your company's jobs.",
+                message: "This student has not applied to any of your company's jobs or internships.",
                 success: false,
             });
         }
@@ -324,14 +334,27 @@ export const getRecruiterApplicantProfile = async (req, res) => {
 
         // Include the list of applications this candidate made for THIS company
         // so the recruiter sees a full picture in the profile modal.
-        const applications = await Application.find({
-            job: { $in: jobIds },
-            applicant: userId,
-        })
-            .populate({ path: 'job', select: 'title location jobType' })
-            .sort({ createdAt: -1 });
+        const [applications, internshipApplications] = await Promise.all([
+            Application.find({
+                job: { $in: jobIds },
+                applicant: userId,
+            })
+                .populate({ path: 'job', select: 'title location jobType' })
+                .sort({ createdAt: -1 }),
+            InternshipApplication.find({
+                internship: { $in: internshipIds },
+                applicant: userId,
+            })
+                .populate({ path: 'internship', select: 'title location locationType duration' })
+                .sort({ createdAt: -1 }),
+        ]);
 
-        return res.status(200).json({ applicant, applications, success: true });
+        return res.status(200).json({
+            applicant,
+            applications,
+            internshipApplications,
+            success: true,
+        });
     } catch (error) {
         logControllerError("application_handler_failed", error, req);
         return res.status(500).json({ message: "Server error", success: false });

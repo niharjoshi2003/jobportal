@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
@@ -47,7 +47,7 @@ const StaffLogin = () => {
                 dispatch(setUser(res.data.user));
                 toast.success(res.data.message || `Welcome back, ${res.data.user.fullname}`);
                 const role = res.data.user.role;
-                navigate(role === 'admin' ? '/admin/overview' : '/recruiter/applicants');
+                navigate(role === 'admin' ? '/admin/overview' : '/recruiter/talent-pool');
             } else {
                 toast.error(res.data?.message || "Login failed");
             }
@@ -67,7 +67,7 @@ const StaffLogin = () => {
         const dest = user.role === 'admin'
             ? '/admin/overview'
             : user.role === 'recruiter'
-                ? '/recruiter/applicants'
+                ? '/recruiter/talent-pool'
                 : '/dashboard';
         navigate(dest);
     }, [sessionReady, user, navigate]);

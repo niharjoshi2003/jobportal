@@ -31,6 +31,8 @@ const Applicants = lazy(() => import('./components/admin/Applicants'));
 const InternshipApplicants = lazy(() => import('./components/admin/InternshipApplicants'));
 const RecruiterApplicants = lazy(() => import('./components/recruiter/RecruiterApplicants'));
 const RecruiterJobApplicants = lazy(() => import('./components/recruiter/RecruiterJobApplicants'));
+const RecruiterInternshipApplicants = lazy(() => import('./components/recruiter/RecruiterInternshipApplicants'));
+const RecruiterTalentPool = lazy(() => import('./components/recruiter/RecruiterTalentPool'));
 const AdminOverview = lazy(() => import('./components/admin/superadmin/AdminOverview'));
 const AdminUsers = lazy(() => import('./components/admin/superadmin/AdminUsers'));
 const AdminPendingStudents = lazy(() => import('./components/admin/superadmin/AdminPendingStudents'));
@@ -103,6 +105,14 @@ const appRouter = createBrowserRouter([
     {
         path: '/recruiter/jobs/:jobId/applicants',
         element: page(<ProtectedRoute roles={['recruiter']}><RecruiterJobApplicants /></ProtectedRoute>)
+    },
+    {
+        path: '/recruiter/internships/:internshipId/applicants',
+        element: page(<ProtectedRoute roles={['recruiter']}><RecruiterInternshipApplicants /></ProtectedRoute>)
+    },
+    {
+        path: '/recruiter/talent-pool',
+        element: page(<ProtectedRoute roles={['recruiter']}><RecruiterTalentPool /></ProtectedRoute>)
     },
     {
         path: '/admin/companies',

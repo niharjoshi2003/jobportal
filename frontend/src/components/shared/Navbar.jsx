@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/button';
 import { Avatar, AvatarImage } from '../ui/avatar';
@@ -19,7 +19,12 @@ const Navbar = () => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const isStaff = user?.role === 'recruiter' || user?.role === 'admin';
-    const navLinks = isStaff
+    const navLinks = user?.role === 'recruiter'
+        ? [
+            { to: '/recruiter/talent-pool', label: 'Student Talent Pool' },
+            { to: '/recruiter/applicants', label: 'Applicants' },
+        ]
+        : user?.role === 'admin'
         ? [
             { to: '/admin/companies', label: 'Companies' },
             { to: '/admin/jobs', label: 'Jobs' },
@@ -47,7 +52,10 @@ const Navbar = () => {
     return (
         <div className="bg-card border-b border-border">
             <div className="flex items-center justify-between mx-auto max-w-7xl h-16 px-4">
-                <Link to={isStaff ? '/admin/companies' : '/dashboard'} className="flex items-center gap-2">
+                <Link
+                    to={user?.role === 'recruiter' ? '/recruiter/talent-pool' : isStaff ? '/admin/companies' : '/dashboard'}
+                    className="flex items-center gap-2"
+                >
                     <BrandLogo size="sm" />
                 </Link>
 

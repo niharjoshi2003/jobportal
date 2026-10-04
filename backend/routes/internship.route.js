@@ -6,6 +6,7 @@ import {
     getInternshipById, getAdminInternships,
     applyInternship, getAppliedInternships,
     getInternshipApplicants, updateInternshipApplicationStatus,
+    getRecruiterInternships,
 } from "../controllers/internship.controller.js";
 
 const router = express.Router();
@@ -13,6 +14,7 @@ const router = express.Router();
 // Only admins can create internships. Recruiters can only review applicants.
 router.route("/post").post(isAuthenticated, authorize("admin"), createInternship);
 router.route("/admin").get(isAuthenticated, authorize("recruiter", "admin"), getAdminInternships);
+router.route("/recruiter").get(isAuthenticated, authorize("recruiter"), getRecruiterInternships);
 
 // Student: my applied internships (must come BEFORE /:id route)
 router.route("/applied").get(isAuthenticated, authorize("student"), getAppliedInternships);

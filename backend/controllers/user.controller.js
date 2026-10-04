@@ -111,6 +111,78 @@ export const toPublicUser = (user) => ({
     notifications: user.notifications,
 });
 
+const maskEmail = (email = "") => {
+    const [local, domain] = String(email).split("@");
+    if (!domain) return "";
+    return `${"*".repeat(Math.max(4, local.length))}@${domain}`;
+};
+
+const maskEnding = (value, visibleCharacters) => {
+    const text = String(value || "");
+    if (!text) return "";
+    const visible = text.slice(-visibleCharacters);
+    return `${"*".repeat(Math.max(4, text.length - visible.length))}${visible}`;
+};
+
+// Recruiters may browse the approved student talent pool before publishing an
+// opening. Contact identifiers stay masked until the student actually applies.
+export const getRecruiterTalentPool = async (req, res) => {
+    try {
+        const q = String(req.query.q || "").trim();
+        const graduationYear = Number(req.query.graduationYear);
+        const query = { role: "student", status: "approved" };
+
+        if (q) {
+            const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const pattern = new RegExp(escaped, "i");
+            query.$or = [
+                { fullname: pattern },
+                { college: pattern },
+                { "profile.skills": pattern },
+                { "profile.customSkills": pattern },
+            ];
+        }
+        if (Number.isInteger(graduationYear) && graduationYear > 0) {
+            query.graduationYear = graduationYear;
+        }
+
+        const [totalStudents, students] = await Promise.all([
+            User.countDocuments({ role: "student", status: "approved" }),
+            User.find(query)
+                .select("fullname email phoneNumber college rollNumber graduationYear gender profile.bio profile.skills profile.customSkills profile.profilePhoto profile.profileCompletion")
+                .sort({ "profile.profileCompletion": -1, createdAt: -1 })
+                .limit(200)
+                .lean(),
+        ]);
+
+        return res.status(200).json({
+            totalStudents,
+            matchedStudents: students.length,
+            students: students.map((student) => ({
+                _id: student._id,
+                fullname: student.fullname,
+                maskedEmail: maskEmail(student.email),
+                maskedPhone: maskEnding(student.phoneNumber, 5),
+                maskedRollNumber: maskEnding(student.rollNumber, 4),
+                college: student.college,
+                graduationYear: student.graduationYear,
+                gender: student.gender,
+                profile: {
+                    bio: student.profile?.bio || "",
+                    skills: student.profile?.skills || [],
+                    customSkills: student.profile?.customSkills || [],
+                    profilePhoto: student.profile?.profilePhoto || "",
+                    profileCompletion: student.profile?.profileCompletion || 0,
+                },
+            })),
+            success: true,
+        });
+    } catch (error) {
+        logControllerError("get_recruiter_talent_pool_failed", error, req);
+        return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
 const getAuthCookieOptions = () => {
     const isProd = process.env.NODE_ENV === "production";
     return {

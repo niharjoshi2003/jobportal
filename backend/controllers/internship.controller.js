@@ -1,5 +1,6 @@
 import { Internship } from "../models/internship.model.js";
 import { InternshipApplication } from "../models/internshipApplication.model.js";
+import { Company } from "../models/company.model.js";
 import { logControllerError } from "../utils/controllerError.js";
 
 export const createInternship = async (req, res) => {
@@ -96,6 +97,56 @@ export const getAdminInternships = async (req, res) => {
     }
 };
 
+export const getRecruiterInternships = async (req, res) => {
+    try {
+        const company = await Company.findOne({ userId: req.user._id }).select("_id name");
+        if (!company) {
+            return res.status(404).json({
+                message: "No company is linked to your account. Contact an administrator.",
+                success: false,
+            });
+        }
+
+        const internships = await Internship.find({ company: company._id })
+            .select("_id title location locationType duration openings deadline createdAt")
+            .sort({ createdAt: -1 })
+            .lean();
+        const internshipIds = internships.map((internship) => internship._id);
+        const counts = internshipIds.length === 0
+            ? []
+            : await InternshipApplication.aggregate([
+                { $match: { internship: { $in: internshipIds } } },
+                { $group: { _id: { internship: "$internship", status: "$status" }, count: { $sum: 1 } } },
+            ]);
+
+        const countsByInternship = {};
+        for (const row of counts) {
+            const key = String(row._id.internship);
+            if (!countsByInternship[key]) {
+                countsByInternship[key] = {
+                    total: 0, pending: 0, shortlisted: 0, accepted: 0, rejected: 0,
+                };
+            }
+            countsByInternship[key][row._id.status] = row.count;
+            countsByInternship[key].total += row.count;
+        }
+
+        return res.status(200).json({
+            company: { _id: company._id, name: company.name },
+            internships: internships.map((internship) => ({
+                ...internship,
+                counts: countsByInternship[String(internship._id)] || {
+                    total: 0, pending: 0, shortlisted: 0, accepted: 0, rejected: 0,
+                },
+            })),
+            success: true,
+        });
+    } catch (error) {
+        logControllerError("internship_handler_failed", error, req);
+        return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
 export const applyInternship = async (req, res) => {
     try {
         const userId = req.id;
@@ -166,6 +217,17 @@ export const getInternshipApplicants = async (req, res) => {
         if (!internship) {
             return res.status(404).json({ message: "Internship not found.", success: false });
         }
+
+        if (req.user?.role === "recruiter") {
+            const company = await Company.findOne({ userId: req.user._id }).select("_id");
+            if (!company || String(internship.company) !== String(company._id)) {
+                return res.status(403).json({
+                    message: "Forbidden: this internship does not belong to your company.",
+                    success: false,
+                });
+            }
+        }
+
         return res.status(200).json({ internship, success: true });
     } catch (error) {
         logControllerError("internship_handler_failed", error, req);
@@ -186,9 +248,19 @@ export const updateInternshipApplicationStatus = async (req, res) => {
             return res.status(400).json({ message: "Invalid status value.", success: false });
         }
 
-        const application = await InternshipApplication.findById(applicationId);
+        const application = await InternshipApplication.findById(applicationId).populate("internship");
         if (!application) {
             return res.status(404).json({ message: "Application not found.", success: false });
+        }
+
+        if (req.user?.role === "recruiter") {
+            const company = await Company.findOne({ userId: req.user._id }).select("_id");
+            if (!company || String(application.internship?.company) !== String(company._id)) {
+                return res.status(403).json({
+                    message: "Forbidden: you can only update applications for your own company.",
+                    success: false,
+                });
+            }
         }
 
         application.status = next;

@@ -5,12 +5,12 @@ import { useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import {
     Briefcase, ChevronRight, MapPin, Users, Search,
-    Download, Eye,
+    Download, Eye, GraduationCap,
 } from 'lucide-react';
 import Navbar from '../shared/Navbar';
 import { Button } from '../ui/button';
 import {
-    APPLICATION_API_END_POINT, USER_API_END_POINT,
+    APPLICATION_API_END_POINT, INTERNSHIP_API_END_POINT, USER_API_END_POINT,
 } from '@/utils/constant';
 import { setUser } from '@/redux/authSlice';
 import { clearSessionToken } from '@/utils/session';
@@ -26,6 +26,7 @@ const statusColor = {
 const RecruiterApplicants = () => {
     const [company, setCompany] = useState(null);
     const [jobs, setJobs] = useState([]);
+    const [internships, setInternships] = useState([]);
     const [loading, setLoading] = useState(true);
     const [q, setQ] = useState('');
     const dispatch = useDispatch();
@@ -34,13 +35,17 @@ const RecruiterApplicants = () => {
     const load = async () => {
         try {
             setLoading(true);
-            const res = await axios.get(
-                `${APPLICATION_API_END_POINT}/recruiter/jobs`,
-                { withCredentials: true }
-            );
-            if (res.data?.success) {
-                setCompany(res.data.company);
-                setJobs(res.data.jobs || []);
+            const [jobsResponse, internshipsResponse] = await Promise.all([
+                axios.get(`${APPLICATION_API_END_POINT}/recruiter/jobs`, { withCredentials: true }),
+                axios.get(`${INTERNSHIP_API_END_POINT}/recruiter`, { withCredentials: true }),
+            ]);
+            if (jobsResponse.data?.success) {
+                setCompany(jobsResponse.data.company);
+                setJobs(jobsResponse.data.jobs || []);
+            }
+            if (internshipsResponse.data?.success) {
+                setCompany((current) => current || internshipsResponse.data.company);
+                setInternships(internshipsResponse.data.internships || []);
             }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to load jobs.');
@@ -74,8 +79,18 @@ const RecruiterApplicants = () => {
         );
     }, [jobs, q]);
 
+    const filteredInternships = useMemo(() => {
+        if (!q.trim()) return internships;
+        const needle = q.trim().toLowerCase();
+        return internships.filter((internship) =>
+            internship.title?.toLowerCase().includes(needle)
+            || internship.location?.toLowerCase().includes(needle)
+            || internship.locationType?.toLowerCase().includes(needle)
+        );
+    }, [internships, q]);
+
     const totals = useMemo(() => {
-        return jobs.reduce(
+        return [...jobs, ...internships].reduce(
             (acc, j) => {
                 acc.total += j.counts?.total || 0;
                 acc.pending += j.counts?.pending || 0;
@@ -86,7 +101,7 @@ const RecruiterApplicants = () => {
             },
             { total: 0, pending: 0, shortlisted: 0, accepted: 0, rejected: 0 }
         );
-    }, [jobs]);
+    }, [jobs, internships]);
 
     const exportAllApplicants = async () => {
         try {
@@ -195,35 +210,39 @@ const RecruiterApplicants = () => {
                     <input
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
-                        placeholder="Search jobs by title, location, type..."
+                        placeholder="Search jobs and internships..."
                         className="bg-transparent text-sm text-foreground outline-none w-full"
                     />
                 </div>
 
                 {loading ? (
                     <div className="text-center py-12 text-muted-foreground">Loading jobs...</div>
-                ) : jobs.length === 0 ? (
+                ) : jobs.length === 0 && internships.length === 0 ? (
                     <div className="text-center py-12 glass-card rounded-2xl">
                         <Briefcase className="mx-auto text-muted-foreground mb-3" size={32} />
-                        <p className="text-muted-foreground mb-1">No job postings yet for your company.</p>
+                        <p className="text-muted-foreground mb-1">No job or internship postings yet for your company.</p>
                         <p className="text-xs text-muted-foreground">
                             Contact the admin to post jobs on your behalf.
                         </p>
                     </div>
-                ) : filteredJobs.length === 0 ? (
+                ) : filteredJobs.length === 0 && filteredInternships.length === 0 ? (
                     <div className="text-center py-12 glass-card rounded-2xl">
-                        <p className="text-muted-foreground">No jobs match your search.</p>
+                        <p className="text-muted-foreground">No openings match your search.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredJobs.map((job) => {
-                            const c = job.counts || {};
-                            return (
-                                <Link
-                                    key={job._id}
-                                    to={`/recruiter/jobs/${job._id}/applicants`}
-                                    className="group glass-card rounded-2xl p-5 hover:border-primary transition relative"
-                                >
+                    <div className="space-y-8">
+                        {filteredJobs.length > 0 && (
+                            <section>
+                                <h2 className="text-lg font-semibold text-foreground mb-3">Jobs</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {filteredJobs.map((job) => {
+                                        const c = job.counts || {};
+                                        return (
+                                            <Link
+                                                key={job._id}
+                                                to={`/recruiter/jobs/${job._id}/applicants`}
+                                                className="group glass-card rounded-2xl p-5 hover:border-primary transition relative"
+                                            >
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
                                             <h3 className="text-lg font-semibold text-foreground group-hover:text-primary truncate">
@@ -270,9 +289,75 @@ const RecruiterApplicants = () => {
                                     <div className="mt-4 inline-flex items-center gap-1.5 text-xs text-primary">
                                         <Eye size={12} /> View applicants
                                     </div>
-                                </Link>
-                            );
-                        })}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        )}
+
+                        {filteredInternships.length > 0 && (
+                            <section>
+                                <h2 className="text-lg font-semibold text-foreground mb-3">Internships</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {filteredInternships.map((internship) => {
+                                        const counts = internship.counts || {};
+                                        return (
+                                            <Link
+                                                key={internship._id}
+                                                to={`/recruiter/internships/${internship._id}/applicants`}
+                                                className="group glass-card rounded-2xl p-5 hover:border-primary transition"
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <h3 className="text-lg font-semibold text-foreground group-hover:text-primary truncate">
+                                                            {internship.title}
+                                                        </h3>
+                                                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
+                                                            <span className="inline-flex items-center gap-1">
+                                                                <GraduationCap size={12} /> Internship
+                                                            </span>
+                                                            {internship.location && (
+                                                                <span className="inline-flex items-center gap-1">
+                                                                    <MapPin size={12} /> {internship.location}
+                                                                </span>
+                                                            )}
+                                                            {internship.locationType && <span>· {internship.locationType}</span>}
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary flex-shrink-0" />
+                                                </div>
+
+                                                <div className="mt-4 inline-flex items-center gap-1.5 text-sm">
+                                                    <Users size={14} className="text-muted-foreground" />
+                                                    <span className="text-foreground font-semibold">{counts.total || 0}</span>
+                                                    <span className="text-muted-foreground">applicants</span>
+                                                </div>
+
+                                                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                                                    <span className={`px-2 py-0.5 rounded-md bg-yellow-500/10 ${statusColor.pending}`}>
+                                                        {counts.pending || 0} pending
+                                                    </span>
+                                                    <span className={`px-2 py-0.5 rounded-md bg-blue-500/10 ${statusColor.shortlisted}`}>
+                                                        {counts.shortlisted || 0} shortlisted
+                                                    </span>
+                                                    <span className={`px-2 py-0.5 rounded-md bg-green-500/10 ${statusColor.accepted}`}>
+                                                        {counts.accepted || 0} accepted
+                                                    </span>
+                                                    <span className={`px-2 py-0.5 rounded-md bg-red-500/10 ${statusColor.rejected}`}>
+                                                        {counts.rejected || 0} rejected
+                                                    </span>
+                                                </div>
+
+                                                <div className="mt-4 inline-flex items-center gap-1.5 text-xs text-primary">
+                                                    <Eye size={12} /> View applicants
+                                                </div>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </section>
+                        )}
                     </div>
                 )}
             </div>
