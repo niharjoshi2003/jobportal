@@ -149,7 +149,7 @@ const maskEmail = (email = "") => {
 const maskEnding = (value, visibleCharacters) => {
     const text = String(value || "");
     if (!text) return "";
-    const visible = text.slice(-visibleCharacters);
+    const visible = text.length > visibleCharacters ? text.slice(-visibleCharacters) : "";
     return `${"*".repeat(Math.max(4, text.length - visible.length))}${visible}`;
 };
 
@@ -167,8 +167,8 @@ export const getRecruiterTalentPool = async (req, res) => {
             query.$or = [
                 { fullname: pattern },
                 { college: pattern },
-                { "profile.skills": pattern },
-                { "profile.customSkills": pattern },
+                { degree: pattern },
+                { department: pattern },
             ];
         }
         if (Number.isInteger(graduationYear) && graduationYear > 0) {
@@ -178,8 +178,8 @@ export const getRecruiterTalentPool = async (req, res) => {
         const [totalStudents, students] = await Promise.all([
             User.countDocuments({ role: "student", status: "approved" }),
             User.find(query)
-                .select("fullname email phoneNumber college rollNumber graduationYear gender degree department city japaneseLevel preferredWorkLocation profile.bio profile.skills profile.customSkills profile.profilePhoto profile.profileCompletion")
-                .sort({ "profile.profileCompletion": -1, createdAt: -1 })
+                .select("fullname email personalEmail phoneNumber college rollNumber graduationYear degree department profile.profilePhoto")
+                .sort({ createdAt: -1 })
                 .limit(200)
                 .lean(),
         ]);
@@ -191,22 +191,15 @@ export const getRecruiterTalentPool = async (req, res) => {
                 _id: student._id,
                 fullname: student.fullname,
                 maskedEmail: maskEmail(student.email),
+                maskedPersonalEmail: maskEmail(student.personalEmail),
                 maskedPhone: maskEnding(student.phoneNumber, 5),
                 maskedRollNumber: maskEnding(student.rollNumber, 4),
                 college: student.college,
                 graduationYear: student.graduationYear,
-                gender: student.gender,
                 degree: student.degree,
                 department: student.department,
-                city: student.city,
-                japaneseLevel: student.japaneseLevel,
-                preferredWorkLocation: student.preferredWorkLocation,
                 profile: {
-                    bio: student.profile?.bio || "",
-                    skills: student.profile?.skills || [],
-                    customSkills: student.profile?.customSkills || [],
                     profilePhoto: student.profile?.profilePhoto || "",
-                    profileCompletion: student.profile?.profileCompletion || 0,
                 },
             })),
             success: true,
@@ -572,6 +565,21 @@ export const updateProfile = async (req, res) => {
         if (college) user.college = college;
         if (graduationYear) user.graduationYear = graduationYear;
         applyEnrollmentFields(user, req.body);
+        for (const field of ['projects', 'researchExperience']) {
+            if (req.body[field] !== undefined) {
+                if (typeof req.body[field] !== 'string' || req.body[field].length > 10000) {
+                    return res.status(400).json({ message: `${field} must be text of at most 10000 characters.`, success: false });
+                }
+                user.profile[field] = req.body[field].trim();
+            }
+        }
+        if (req.body.preferredJobDomains !== undefined) {
+            if (typeof req.body.preferredJobDomains !== 'string' || req.body.preferredJobDomains.length > 1000) {
+                return res.status(400).json({ message: 'Preferred job domains must be text of at most 1000 characters.', success: false });
+            }
+            user.profile.preferredJobDomains = [...new Set(req.body.preferredJobDomains.split(',').map(value => value.trim()).filter(Boolean))];
+        }
+
         if (externalLinks) {
             try {
                 user.profile.externalLinks = JSON.parse(externalLinks);

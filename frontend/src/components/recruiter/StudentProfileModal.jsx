@@ -19,7 +19,7 @@ const InfoRow = ({ icon: Icon, label, value }) => (
     <div className="flex items-center gap-2 text-sm">
         <Icon size={14} className="text-muted-foreground flex-shrink-0" />
         <span className="text-muted-foreground">{label}:</span>
-        <span className="text-foreground font-medium truncate">{value || '—'}</span>
+        <span className="text-foreground font-medium break-words min-w-0">{value || '—'}</span>
     </div>
 );
 
@@ -107,12 +107,17 @@ const StudentProfileModal = ({ userId, open, onOpenChange }) => {
                                 )}
                                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                     <InfoRow icon={Mail} label="Email" value={applicant.email} />
+                                    <InfoRow icon={Mail} label="Personal email" value={applicant.personalEmail} />
                                     <InfoRow icon={Phone} label="Phone" value={applicant.phoneNumber} />
                                     <InfoRow icon={GraduationCap} label="College" value={applicant.college} />
                                     <InfoRow icon={Hash} label="Roll No" value={applicant.rollNumber} />
                                     <InfoRow icon={GraduationCap} label="Grad Year" value={applicant.graduationYear} />
                                     <InfoRow icon={GraduationCap} label="Degree" value={applicant.degree} />
-                                    <InfoRow icon={GraduationCap} label="Department" value={applicant.department} />
+                                    <InfoRow icon={GraduationCap} label="Major course" value={applicant.department} />
+                                    <InfoRow icon={GraduationCap} label="Semester" value={applicant.currentSemester} />
+                                    <InfoRow icon={GraduationCap} label="CGPA" value={applicant.cgpa} />
+                                    <InfoRow icon={MapPin} label="English" value={applicant.englishLevel} />
+                                    <InfoRow icon={MapPin} label="Willing to relocate" value={applicant.willingToRelocate} />
                                     <InfoRow icon={MapPin} label="City" value={applicant.city} />
                                     <InfoRow icon={MapPin} label="Japanese" value={applicant.japaneseLevel} />
                                     <InfoRow icon={MapPin} label="Preferred work" value={applicant.preferredWorkLocation} />
@@ -120,6 +125,19 @@ const StudentProfileModal = ({ userId, open, onOpenChange }) => {
                                 </div>
                             </div>
                         </div>
+
+                        <Section title="Preferred job domains">
+                            <p className="text-sm text-foreground break-words">{applicant.profile?.preferredJobDomains?.join(', ') || 'No preferred job domains provided.'}</p>
+                        </Section>
+                        {[
+                            ['Projects', applicant.profile?.projects],
+                            ['Research experience', applicant.profile?.researchExperience],
+                            ['Work / internship experience', applicant.workExperience],
+                        ].map(([title, value]) => (
+                            <Section key={title} title={title}>
+                                <p className="text-sm text-foreground whitespace-pre-wrap break-words">{value || 'Not provided.'}</p>
+                            </Section>
+                        ))}
 
                         {/* Skills */}
                         {skills.length > 0 && (

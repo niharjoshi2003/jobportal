@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
     GraduationCap, Hash, Mail, Phone, Search, ShieldCheck, UserRoundSearch,
@@ -13,7 +13,7 @@ const profileInfo = (Icon, label, value) => (
     <div className="flex items-center gap-2 min-w-0">
         <Icon size={15} className="text-primary flex-shrink-0" />
         <span className="text-muted-foreground">{label}:</span>
-        <span className="text-foreground truncate">{value || '—'}</span>
+        <span className="text-foreground break-words min-w-0">{value || '—'}</span>
     </div>
 );
 
@@ -52,14 +52,6 @@ const RecruiterTalentPool = () => {
         };
     }, [query]);
 
-    const skills = useMemo(() => {
-        if (!selectedStudent) return [];
-        return [
-            ...(selectedStudent.profile?.skills || []),
-            ...(selectedStudent.profile?.customSkills || []),
-        ];
-    }, [selectedStudent]);
-
     return (
         <div>
             <Navbar />
@@ -73,7 +65,7 @@ const RecruiterTalentPool = () => {
                             Discover students before posting a role
                         </h1>
                         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-                            Review available skills and academic backgrounds to understand the portal&apos;s talent pool.
+                            Review basic academic backgrounds to understand the portal&apos;s talent pool.
                             Contact details remain protected until a student applies to your company.
                         </p>
                     </div>
@@ -91,7 +83,7 @@ const RecruiterTalentPool = () => {
                         <input
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
-                            placeholder="Search by name, college, or skill..."
+                            placeholder="Search by name, college, degree, or major..."
                             className="bg-transparent text-sm text-foreground outline-none w-full"
                         />
                     </div>
@@ -111,10 +103,6 @@ const RecruiterTalentPool = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {students.map((student) => {
-                            const studentSkills = [
-                                ...(student.profile?.skills || []),
-                                ...(student.profile?.customSkills || []),
-                            ];
                             return (
                                 <button
                                     key={student._id}
@@ -130,7 +118,7 @@ const RecruiterTalentPool = () => {
                                             />
                                         </Avatar>
                                         <div className="min-w-0 flex-1">
-                                            <h2 className="font-semibold text-foreground truncate">{student.fullname}</h2>
+                                            <h2 className="font-semibold text-foreground break-words min-w-0">{student.fullname}</h2>
                                             <p className="text-xs text-muted-foreground truncate">
                                                 {student.college || 'College not provided'}
                                             </p>
@@ -139,31 +127,8 @@ const RecruiterTalentPool = () => {
                                             </p>
                                             <p className="text-xs text-muted-foreground mt-1">
                                                 Graduation: {student.graduationYear || 'Not provided'}
-                                                {student.japaneseLevel ? ` · Japanese: ${student.japaneseLevel}` : ''}
                                             </p>
                                         </div>
-                                    </div>
-
-                                    {student.profile?.bio && (
-                                        <p className="text-sm text-muted-foreground mt-4 line-clamp-3">
-                                            {student.profile.bio}
-                                        </p>
-                                    )}
-
-                                    <div className="flex flex-wrap gap-1.5 mt-4">
-                                        {studentSkills.slice(0, 5).map((skill) => (
-                                            <span
-                                                key={skill}
-                                                className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary"
-                                            >
-                                                {skill}
-                                            </span>
-                                        ))}
-                                        {studentSkills.length > 5 && (
-                                            <span className="text-xs px-2 py-1 text-muted-foreground">
-                                                +{studentSkills.length - 5} more
-                                            </span>
-                                        )}
                                     </div>
 
                                     <div className="mt-4 pt-3 border-t border-border text-xs text-primary">
@@ -195,47 +160,21 @@ const RecruiterTalentPool = () => {
                                 <div className="flex-1 min-w-0">
                                     <h2 className="text-2xl font-bold text-foreground">{selectedStudent.fullname}</h2>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 text-sm">
-                                        {profileInfo(Mail, 'Email', selectedStudent.maskedEmail)}
+                                        {profileInfo(Mail, 'College email', selectedStudent.maskedEmail)}
+                                        {profileInfo(Mail, 'Personal email', selectedStudent.maskedPersonalEmail)}
                                         {profileInfo(Phone, 'Phone', selectedStudent.maskedPhone)}
                                         {profileInfo(GraduationCap, 'College', selectedStudent.college)}
                                         {profileInfo(Hash, 'Roll No.', selectedStudent.maskedRollNumber)}
                                         {profileInfo(GraduationCap, 'Grad Year', selectedStudent.graduationYear)}
                                         {profileInfo(GraduationCap, 'Degree', selectedStudent.degree)}
-                                        {profileInfo(GraduationCap, 'Department', selectedStudent.department)}
-                                        {profileInfo(GraduationCap, 'Japanese', selectedStudent.japaneseLevel)}
-                                        {profileInfo(GraduationCap, 'Preferred work', selectedStudent.preferredWorkLocation)}
+                                        {profileInfo(GraduationCap, 'Major course', selectedStudent.department)}
                                     </div>
                                 </div>
                             </div>
 
-                            <section className="p-5 rounded-xl bg-white/5 border border-border">
-                                <h3 className="font-semibold text-foreground mb-3">Self Introduction</h3>
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                    {selectedStudent.profile?.bio || 'No self introduction provided.'}
-                                </p>
-                            </section>
-
-                            <section className="p-5 rounded-xl bg-white/5 border border-border">
-                                <h3 className="font-semibold text-foreground mb-3">Skills</h3>
-                                {skills.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {skills.map((skill) => (
-                                            <span
-                                                key={skill}
-                                                className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20"
-                                            >
-                                                {skill}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No skills added yet.</p>
-                                )}
-                            </section>
-
                             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                                 <ShieldCheck size={14} className="text-green-400" />
-                                Resume, links, and complete contact details become available after this student applies.
+                                Full profiles become available when a student applies to your company&apos;s job or internship.
                             </p>
                         </div>
                     )}

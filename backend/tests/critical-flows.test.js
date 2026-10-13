@@ -461,3 +461,74 @@ test("student enrollment fields are saved on register and profile update", async
     assert.equal(updateRes.body.user.profile.certificates[0].name, "JLPT N5");
 });
 
+
+
+test("recruiters see only masked previews until a student applies to their company", async () => {
+    const { Internship } = await import("../models/internship.model.js");
+    const { InternshipApplication } = await import("../models/internshipApplication.model.js");
+    const password = await bcrypt.hash("Visibility123", 10);
+    const recruiter = await User.create({ fullname: "Visibility Recruiter", email: "visibility.recruiter@example.com", phoneNumber: 1234567890, password, role: "recruiter", status: "approved" });
+    const otherRecruiter = await User.create({ fullname: "Other Recruiter", email: "other.recruiter@example.com", phoneNumber: 1234567891, password, role: "recruiter", status: "approved" });
+    const student = await User.create({
+        fullname: "Visibility Student", email: "visibility.student@example.com", personalEmail: "private@example.com",
+        phoneNumber: 9876543210, password, role: "student", status: "approved", college: "Visibility College",
+        rollNumber: "12", degree: "B.Tech", department: "Electronics", graduationYear: 2027,
+        profile: { bio: "Private bio", skills: ["SecretSkill"], introVideo: { url: "https://example.com/video" } },
+    });
+    const company = await Company.create({ name: "Visibility Company", userId: recruiter._id });
+    await Company.create({ name: "Other Visibility Company", userId: otherRecruiter._id });
+    const agent = request.agent(app);
+    const otherAgent = request.agent(app);
+    const studentAgent = request.agent(app);
+    for (const [client, email, role] of [
+        [agent, recruiter.email, "recruiter"], [otherAgent, otherRecruiter.email, "recruiter"], [studentAgent, student.email, "student"],
+    ]) {
+        await client.post("/api/v1/user/login").send({ email, password: "Visibility123", role }).expect(200);
+    }
+    const updated = await studentAgent.post("/api/v1/user/profile/update")
+        .field("preferredJobDomains", "Electronics, Research, Electronics")
+        .field("projects", "Built a sensor platform")
+        .field("researchExperience", "Signal processing research").expect(200);
+    assert.deepEqual(updated.body.user.profile.preferredJobDomains, ["Electronics", "Research"]);
+    const persisted = await User.findById(student._id);
+    assert.equal(persisted.profile.projects, "Built a sensor platform");
+    assert.equal(persisted.profile.researchExperience, "Signal processing research");
+    const pool = await agent.get("/api/v1/user/recruiter/talent-pool?q=Visibility Student").expect(200);
+    const preview = pool.body.students[0];
+    assert.deepEqual(Object.keys(preview).sort(), ["_id", "fullname", "maskedEmail", "maskedPersonalEmail", "maskedPhone", "maskedRollNumber", "college", "graduationYear", "degree", "department", "profile"].sort());
+    assert.deepEqual(Object.keys(preview.profile), ["profilePhoto"]);
+    assert.match(preview.maskedEmail, /^\*+@example\.com$/);
+    assert.match(preview.maskedPersonalEmail, /^\*+@example\.com$/);
+    assert.equal(preview.maskedPhone, "*****43210");
+    assert.equal(preview.maskedRollNumber, "****");
+    const hiddenSearch = await agent.get("/api/v1/user/recruiter/talent-pool?q=SecretSkill").expect(200);
+    assert.equal(hiddenSearch.body.students.length, 0);
+    await studentAgent.get("/api/v1/user/recruiter/talent-pool").expect(403);
+    const endpoint = `/api/v1/application/recruiter/applicant/${student._id}`;
+    await agent.get(endpoint).expect(403);
+    const job = await Job.create({ title: "Visibility Job", description: "Test", salary: 10, location: "Remote", jobType: "Full-time", experienceLevel: 0, position: 5, company: company._id, created_by: recruiter._id });
+    await agent.get(endpoint).expect(403); // Posting alone never unlocks a profile.
+    await Application.create({ job: job._id, applicant: student._id });
+    const full = await agent.get(endpoint).expect(200);
+    assert.equal(full.body.applicant.email, student.email);
+    assert.equal(full.body.applicant.personalEmail, student.personalEmail);
+    assert.equal(full.body.applicant.profile.projects, "Built a sensor platform");
+    assert.equal(full.body.applicant.profile.researchExperience, "Signal processing research");
+    assert.deepEqual(full.body.applicant.profile.preferredJobDomains, ["Electronics", "Research"]);
+    assert.equal(full.body.applicant.password, undefined);
+    await otherAgent.get(endpoint).expect(403);
+    await Application.deleteOne({ job: job._id, applicant: student._id });
+    const internship = await Internship.create({ title: "Visibility Internship", description: "Test", location: "Tokyo", deadline: new Date(Date.now() + 86400000), company: company._id, created_by: recruiter._id });
+    await agent.get(endpoint).expect(403);
+    await InternshipApplication.create({ internship: internship._id, applicant: student._id });
+    const internshipFull = await agent.get(endpoint).expect(200);
+    assert.equal(internshipFull.body.applicant.email, student.email);
+    assert.equal(internshipFull.body.internshipApplications.length, 1);
+    await otherAgent.get(endpoint).expect(403);
+    const cleared = await studentAgent.post("/api/v1/user/profile/update")
+        .field("preferredJobDomains", "").field("projects", "").field("researchExperience", "").expect(200);
+    assert.deepEqual(cleared.body.user.profile.preferredJobDomains, []);
+    assert.equal(cleared.body.user.profile.projects, "");
+    assert.equal(cleared.body.user.profile.researchExperience, "");
+    await studentAgent.post("/api/v1/user/profile/update").field("projects", "x".repeat(10001)).expect(400);
+});

@@ -123,6 +123,9 @@ const userSchema = new mongoose.Schema({
     },
     profile: {
         bio: { type: String },
+        preferredJobDomains: [{ type: String }],
+        projects: { type: String, default: "", maxlength: 10000 },
+        researchExperience: { type: String, default: "", maxlength: 10000 },
         skills: [{ type: String }],
         customSkills: [{ type: String }],
         resume: { type: String },

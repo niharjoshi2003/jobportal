@@ -60,6 +60,9 @@ const buildEditForm = (user) => ({
     phoneNumber: user?.phoneNumber || '',
     personalEmail: user?.personalEmail || '',
     bio: user?.profile?.bio || '',
+    preferredJobDomains: (user?.profile?.preferredJobDomains || []).join(', '),
+    projects: user?.profile?.projects || '',
+    researchExperience: user?.profile?.researchExperience || '',
     gender: user?.gender || '',
     college: user?.college || '',
     graduationYear: user?.graduationYear || '',
@@ -130,7 +133,7 @@ const ProfilePage = () => {
             setLoading(true);
             const formData = new FormData();
             Object.entries(editForm).forEach(([key, val]) => {
-                if (val) formData.append(key, val);
+                if (val || ['preferredJobDomains', 'projects', 'researchExperience'].includes(key)) formData.append(key, val);
             });
 
             const res = await axios.post(`${USER_API_END_POINT}/profile/update`, formData, {
@@ -349,6 +352,26 @@ const ProfilePage = () => {
                 )}
             </SectionCard>
 
+            <SectionCard title="Job interests, projects & research" onEdit={() => {
+                setEditForm(buildEditForm(user));
+                setEditOpen(true);
+            }}>
+                <div className="space-y-4 text-sm">
+                    <div>
+                        <h3 className="font-medium text-foreground">Preferred job domains</h3>
+                        <p className="text-muted-foreground">{user?.profile?.preferredJobDomains?.join(', ') || 'No preferred domains added yet.'}</p>
+                    </div>
+                    <div>
+                        <h3 className="font-medium text-foreground">Projects</h3>
+                        <p className="text-muted-foreground whitespace-pre-wrap break-words">{user?.profile?.projects || 'No projects added yet.'}</p>
+                    </div>
+                    <div>
+                        <h3 className="font-medium text-foreground">Research experience</h3>
+                        <p className="text-muted-foreground whitespace-pre-wrap break-words">{user?.profile?.researchExperience || 'No research experience added yet.'}</p>
+                    </div>
+                </div>
+            </SectionCard>
+
             {/* Certificates */}
             <SectionCard title="Certificates & qualifications" onEdit={() => {
                 setCertificates(user?.profile?.certificates || []);
@@ -551,6 +574,28 @@ const ProfilePage = () => {
                                         value={editForm[field.id]}
                                         onChange={e => setEditForm({ ...editForm, [field.id]: e.target.value })}
                                         className="sm:col-span-3 bg-white/5 border-border" />
+                                </div>
+                            ))}
+
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground pt-2">Job interests, projects & research</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-3">
+                                <Label htmlFor="preferredJobDomains" className="sm:text-right text-xs mt-2">Preferred job domains</Label>
+                                <Input id="preferredJobDomains" value={editForm.preferredJobDomains} maxLength={1000}
+                                    onChange={e => setEditForm({ ...editForm, preferredJobDomains: e.target.value })}
+                                    placeholder="e.g. Software engineering, Electronics, Research"
+                                    className="sm:col-span-3 bg-white/5 border-border" />
+                            </div>
+                            <p className="text-xs text-muted-foreground">Separate domains with commas.</p>
+                            {[
+                                { id: 'projects', label: 'Projects', placeholder: 'Project titles, your contribution, technologies, results, and relevant links' },
+                                { id: 'researchExperience', label: 'Research experience', placeholder: 'Research topics, institution or lab, your contribution, publications, and relevant links' },
+                            ].map(field => (
+                                <div key={field.id} className="grid grid-cols-1 sm:grid-cols-4 items-start gap-2 sm:gap-3">
+                                    <Label htmlFor={field.id} className="sm:text-right text-xs mt-2">{field.label}</Label>
+                                    <textarea id={field.id} value={editForm[field.id]} maxLength={10000} rows={4}
+                                        onChange={e => setEditForm({ ...editForm, [field.id]: e.target.value })}
+                                        placeholder={field.placeholder}
+                                        className="sm:col-span-3 bg-white/5 border border-border rounded-md px-3 py-2 text-sm text-foreground" />
                                 </div>
                             ))}
 
