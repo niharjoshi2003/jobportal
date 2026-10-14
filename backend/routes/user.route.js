@@ -1,7 +1,7 @@
 import express from "express";
 import {
     login, logout, register, getMe, updateProfile, updateProfilePhoto,
-    addResume, deleteResume, getNotifications, markNotificationRead,
+    addResume, deleteResume, selectResume, getNotifications, markNotificationRead,
     getDashboardStats, forgotPassword, resetPassword, getRecruiterTalentPool
 } from "../controllers/user.controller.js";
 import isAuthenticated from "../middlewares/isAuthenticated.js";
@@ -24,7 +24,8 @@ router.route("/recruiter/talent-pool").get(
 router.route("/profile/update").post(isAuthenticated, singleUpload, updateProfile);
 router.route("/profile/photo").post(isAuthenticated, singleUpload, updateProfilePhoto);
 router.route("/profile/resume").post(isAuthenticated, singleUpload, addResume);
-router.route("/profile/resume/:resumeId").delete(isAuthenticated, deleteResume);
+router.route("/profile/resume/:resumeId").delete(isAuthenticated, authorize("student"), deleteResume);
+router.route("/profile/resume/:resumeId/select").put(isAuthenticated, authorize("student"), selectResume);
 router.route("/notifications").get(isAuthenticated, getNotifications);
 router.route("/notifications/read").put(isAuthenticated, markNotificationRead);
 router.route("/dashboard/stats").get(isAuthenticated, getDashboardStats);

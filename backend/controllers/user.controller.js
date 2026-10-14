@@ -1,3 +1,4 @@
+import { normalizeResumes } from "../utils/resumeSelection.js";
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -605,8 +606,8 @@ export const updateProfile = async (req, res) => {
         }
 
         if (resumeUrl) {
-            user.profile.resume = resumeUrl;
-            user.profile.resumeOriginalName = file.originalname;
+            normalizeResumes(user.profile);
+            user.profile.resumes.push({ url: resumeUrl, originalName: file.originalname, type: "domain" });
         }
 
         user.profile.profileCompletion = user.calculateProfileCompletion();
@@ -693,11 +694,7 @@ export const addResume = async (req, res) => {
             uploadedAt: new Date()
         };
 
-        if (resumeType === 'master') {
-            user.profile.resume = resumeUrl;
-            user.profile.resumeOriginalName = file.originalname;
-        }
-
+        normalizeResumes(user.profile);
         user.profile.resumes.push(newResume);
         user.profile.profileCompletion = user.calculateProfileCompletion();
         await user.save();
@@ -705,6 +702,7 @@ export const addResume = async (req, res) => {
         return res.status(200).json({
             message: "Resume uploaded successfully.",
             resumes: user.profile.resumes,
+            profile: user.toObject().profile,
             success: true
         });
     } catch (error) {
@@ -723,10 +721,19 @@ export const deleteResume = async (req, res) => {
             return res.status(400).json({ message: "User not found.", success: false });
         }
 
-        user.profile.resumes = user.profile.resumes.filter(r => r._id.toString() !== resumeId);
+        normalizeResumes(user.profile);
+        const target = user.profile.resumes.find(r => (String(r._id) === resumeId || (resumeId === "legacy" && r.url === user.profile.resume)));
+        if (!target) return res.status(404).json({ message: "Resume not found.", success: false });
+        if (String(user.profile.selectedResumeId) === String(target._id)) {
+            user.profile.selectedResumeId = null;
+            user.profile.resume = '';
+            user.profile.resumeOriginalName = '';
+        }
+        user.profile.resumes = user.profile.resumes.filter(r => String(r._id) !== String(target._id));
+        user.profile.profileCompletion = user.calculateProfileCompletion();
         await user.save();
 
-        return res.status(200).json({ message: "Resume deleted.", resumes: user.profile.resumes, success: true });
+        return res.status(200).json({ message: "Resume deleted.", profile: user.toObject().profile, resumes: user.profile.resumes, success: true });
     } catch (error) {
         logControllerError("user_handler_failed", error, req);
         return res.status(500).json({ message: "Server error", success: false });
@@ -804,5 +811,23 @@ export const getDashboardStats = async (req, res) => {
     } catch (error) {
         logControllerError("user_handler_failed", error, req);
         return res.status(500).json({ message: "Server error", success: false });
+    }
+};
+
+export const selectResume = async (req, res) => {
+    try {
+        const user = await User.findById(req.id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+        normalizeResumes(user.profile);
+        const resume = user.profile.resumes.find(r => (String(r._id) === req.params.resumeId || (req.params.resumeId === "legacy" && r.url === user.profile.resume)));
+        if (!resume) return res.status(404).json({ success: false, message: 'Resume not found.' });
+        user.profile.selectedResumeId = resume._id;
+        user.profile.resume = resume.url;
+        user.profile.resumeOriginalName = resume.originalName;
+        await user.save();
+        return res.json({ success: true, message: 'Recruiter resume selected.', profile: user.toObject().profile });
+    } catch (error) {
+        logControllerError('select_resume_failed', error, req);
+        return res.status(500).json({ success: false, message: 'Server error' });
     }
 };

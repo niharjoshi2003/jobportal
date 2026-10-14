@@ -49,31 +49,26 @@ const Sidebar = () => {
         toast.success("Logged out successfully.");
     };
 
-    const sidebarContent = (
+    const sidebarContent = (compact = false) => (
         <div className="flex flex-col h-full">
             {/* Logo */}
-            <div className="px-4 py-5 flex items-center justify-between">
-                {!collapsed && (
-                    <Link to="/dashboard" className="flex items-center gap-2">
-                        <BrandLogo size="sm" />
-                    </Link>
-                )}
-                {collapsed && (
-                    <Link to="/dashboard" className="flex items-center justify-center w-8 h-8">
-                        <BrandLogo size="sm" showWordmark={false} />
-                    </Link>
-                )}
+            <div className={`flex shrink-0 border-b border-white/10 mb-4 ${compact ? 'flex-col items-center gap-3 px-3 py-4' : 'items-center justify-between gap-2 px-4 py-5'}`}>
+                <Link to="/dashboard" aria-label="Job-O-Hire dashboard" onClick={() => setMobileOpen(false)} className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-[hsl(222,47%,8%)]">
+                    <BrandLogo variant="dashboard" showWordmark={!compact} showTagline={!compact} />
+                </Link>
                 <button
                     onClick={() => setCollapsed(!collapsed)}
-                    className="hidden lg:flex p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground transition-colors"
+                    aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+                    aria-expanded={!compact}
+                    className="hidden lg:flex shrink-0 p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                    {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                    {compact ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                 </button>
             </div>
 
             {/* Profile Card */}
-            <div className={`mx-3 mb-4 p-3 rounded-xl bg-white/5 border border-white/10 ${collapsed ? 'items-center' : ''}`}>
-                <div className={`flex ${collapsed ? 'justify-center' : 'items-center gap-3'}`}>
+            <div className={`mx-3 mb-4 p-3 rounded-xl bg-white/5 border border-white/10 ${compact ? 'items-center' : ''}`}>
+                <div className={`flex ${compact ? 'justify-center' : 'items-center gap-3'}`}>
                     <div className="relative">
                         <Avatar className="h-10 w-10 border-2 border-primary">
                             <AvatarImage
@@ -83,14 +78,14 @@ const Sidebar = () => {
                         </Avatar>
                         <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-green-500 border-2 border-[hsl(222,47%,8%)]" />
                     </div>
-                    {!collapsed && (
+                    {!compact && (
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-white truncate">{user?.fullname}</p>
                             <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                         </div>
                     )}
                 </div>
-                {!collapsed && (
+                {!compact && (
                     <div className="mt-3">
                         <div className="flex items-center justify-between mb-1">
                             <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Profile</span>
@@ -121,12 +116,12 @@ const Sidebar = () => {
                                     ? 'bg-primary/15 text-primary shadow-sm shadow-primary/10'
                                     : 'text-muted-foreground hover:text-white hover:bg-white/5'
                                 }
-                                ${collapsed ? 'justify-center' : ''}
+                                ${compact ? 'justify-center' : ''}
                             `}
-                            title={collapsed ? item.label : undefined}
+                            title={compact ? item.label : undefined}
                         >
                             <Icon size={19} className={isActive ? 'text-primary' : ''} />
-                            {!collapsed && <span>{item.label}</span>}
+                            {!compact && <span>{item.label}</span>}
                         </Link>
                     );
                 })}
@@ -137,17 +132,17 @@ const Sidebar = () => {
                 <Link
                     to="/help"
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-white hover:bg-white/5 transition-colors ${collapsed ? 'justify-center' : ''}`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-white hover:bg-white/5 transition-colors ${compact ? 'justify-center' : ''}`}
                 >
                     <HelpCircle size={19} />
-                    {!collapsed && <span>Help Desk</span>}
+                    {!compact && <span>Help Desk</span>}
                 </Link>
                 <button
                     onClick={logoutHandler}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors w-full ${collapsed ? 'justify-center' : ''}`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-colors w-full ${compact ? 'justify-center' : ''}`}
                 >
                     <LogOut size={19} />
-                    {!collapsed && <span>Logout</span>}
+                    {!compact && <span>Logout</span>}
                 </button>
             </div>
         </div>
@@ -157,6 +152,7 @@ const Sidebar = () => {
         <>
             {/* Mobile Hamburger */}
             <button
+                aria-label="Open navigation"
                 onClick={() => setMobileOpen(true)}
                 className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-card border border-border text-foreground"
             >
@@ -178,11 +174,12 @@ const Sidebar = () => {
             >
                 <button
                     onClick={() => setMobileOpen(false)}
-                    className="absolute top-4 right-4 p-1 rounded-lg hover:bg-white/10 text-muted-foreground"
+                    aria-label="Close navigation"
+                    className="absolute top-7 right-3 p-1 rounded-lg hover:bg-white/10 text-muted-foreground"
                 >
                     <X size={18} />
                 </button>
-                {sidebarContent}
+                {sidebarContent(false)}
             </aside>
 
             {/* Desktop Sidebar */}
@@ -190,7 +187,7 @@ const Sidebar = () => {
                 className={`hidden lg:flex flex-col h-screen sticky top-0 bg-[hsl(222,47%,8%)] border-r border-white/10 transition-all duration-300 ${collapsed ? 'w-[72px]' : 'w-64'
                     }`}
             >
-                {sidebarContent}
+                {sidebarContent(collapsed)}
             </aside>
         </>
     );

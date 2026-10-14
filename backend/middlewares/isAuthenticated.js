@@ -1,3 +1,4 @@
+import { exposeSelectedResumes } from "../utils/resumeSelection.js";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 
@@ -50,6 +51,10 @@ const isAuthenticated = async (req, res, next) => {
             });
         }
         req.user = user;
+        if (user.role === 'recruiter') {
+            const sendJson = res.json.bind(res);
+            res.json = (body) => sendJson(exposeSelectedResumes(JSON.parse(JSON.stringify(body))));
+        }
 
         next();
     } catch (error) {

@@ -130,6 +130,7 @@ const userSchema = new mongoose.Schema({
         customSkills: [{ type: String }],
         resume: { type: String },
         resumeOriginalName: { type: String },
+        selectedResumeId: { type: mongoose.Schema.Types.ObjectId },
         resumes: [{
             url: { type: String },
             originalName: { type: String },

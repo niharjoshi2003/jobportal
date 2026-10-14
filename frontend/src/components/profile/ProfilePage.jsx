@@ -201,6 +201,28 @@ const ProfilePage = () => {
         }
     };
 
+    const [resumeBusy, setResumeBusy] = useState(false);
+    const [resumeToDelete, setResumeToDelete] = useState(null);
+    const resumes = user?.profile?.resumes?.length ? user.profile.resumes :
+        user?.profile?.resume ? [{ _id: 'legacy', url: user.profile.resume, originalName: user.profile.resumeOriginalName }] : [];
+    const isSelectedResume = (resume) => user?.profile?.selectedResumeId
+        ? String(user.profile.selectedResumeId) === String(resume._id)
+        : user?.profile?.selectedResumeId !== null && resume.url === user?.profile?.resume;
+    const manageResume = async (resume, action) => {
+        setResumeBusy(true);
+        try {
+            const url = `${USER_API_END_POINT}/profile/resume/${resume._id}${action === 'select' ? '/select' : ''}`;
+            const res = await axios[action === 'select' ? 'put' : 'delete'](url, ...(action === 'select' ? [{}, { withCredentials: true }] : [{ withCredentials: true }]));
+            dispatch(setUser({ ...user, profile: res.data.profile }));
+            setResumeToDelete(null);
+            toast.success(res.data.message);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Unable to update resume');
+        } finally {
+            setResumeBusy(false);
+        }
+    };
+
     const handleResumeUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -220,7 +242,7 @@ const ProfilePage = () => {
             if (res.data.success) {
                 dispatch(setUser({
                     ...user,
-                    profile: { ...user.profile, resumes: res.data.resumes }
+                    profile: res.data.profile
                 }));
                 toast.success('Resume uploaded');
                 setResumeUploadOpen(false);
@@ -419,10 +441,11 @@ const ProfilePage = () => {
 
             {/* Resume Section */}
             <SectionCard title="Resumes" onEdit={() => setResumeUploadOpen(true)}>
-                {user?.profile?.resumes?.length > 0 ? (
+                <p className="text-sm text-muted-foreground mb-3">Choose one resume to share with recruiters. Other uploaded resumes stay private in your profile.</p>
+                {resumes.length > 0 ? (
                     <div className="space-y-2">
-                        {user.profile.resumes.map((resume, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                        {resumes.map((resume) => (
+                            <div key={resume._id} className="flex flex-wrap gap-3 items-center justify-between p-3 rounded-lg bg-white/5">
                                 <div className="flex items-center gap-3">
                                     <FileText size={18} className="text-primary" />
                                     <div>
@@ -435,9 +458,13 @@ const ProfilePage = () => {
                                         </p>
                                     </div>
                                 </div>
-                                <Badge className={`text-[10px] border-0 ${resume.type === 'master' ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-muted-foreground'}`}>
-                                    {resume.type}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                                        <input type="radio" name="recruiterResume" checked={isSelectedResume(resume)} disabled={resumeBusy || resumeUploading} onChange={() => manageResume(resume, 'select')} />
+                                        {isSelectedResume(resume) ? 'Visible to recruiters' : 'Show to recruiters'}
+                                    </label>
+                                    <Button variant="ghost" size="sm" disabled={resumeBusy || resumeUploading} onClick={() => setResumeToDelete(resume)} className="text-red-400">Delete</Button>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -699,12 +726,22 @@ const ProfilePage = () => {
                 </DialogContent>
             </Dialog>
 
+            <Dialog open={!!resumeToDelete} onOpenChange={(open) => { if (!open && !resumeBusy) setResumeToDelete(null); }}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Delete resume?</DialogTitle></DialogHeader>
+                    <p className="text-sm">Delete {resumeToDelete?.originalName || 'this resume'} from your profile? {resumeToDelete && isSelectedResume(resumeToDelete) ? 'Recruiters will see no resume until you select another one.' : ''}</p>
+                    <DialogFooter>
+                        <Button variant="outline" disabled={resumeBusy} onClick={() => setResumeToDelete(null)}>Cancel</Button>
+                        <Button disabled={resumeBusy} onClick={() => manageResume(resumeToDelete, 'delete')}>{resumeBusy ? 'Deleting...' : 'Delete resume'}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             {/* Resume Upload Dialog */}
             <Dialog open={resumeUploadOpen} onOpenChange={setResumeUploadOpen}>
                 <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
                     <DialogHeader><DialogTitle>Upload Resume</DialogTitle></DialogHeader>
                     <div className="space-y-4 py-4">
-                        <p className="text-sm text-muted-foreground">Upload a PDF, DOC, or DOCX file (max 5MB). Your Master Resume is used for all recommendations.</p>
+                        <p className="text-sm text-muted-foreground">Upload a PDF, DOC, or DOCX file (max 5MB). After uploading, choose the one resume you want recruiters to see.</p>
                         <label className={`flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-xl transition-colors ${resumeUploading ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50'}`}>
                             <Upload size={32} className="text-muted-foreground mb-2" />
                             <span className="text-sm text-muted-foreground">
