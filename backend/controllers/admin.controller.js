@@ -41,7 +41,7 @@ export const getStats = async (req, res) => {
     try {
         const [
             totalUsers, totalStudents, totalRecruiters, totalAdmins,
-            pendingStudents,
+            pendingStudents, approvedStudents, rejectedStudents, unclassifiedStudents,
             totalCompanies, verifiedCompanies,
             totalJobs, totalInternships,
             totalJobApplications, totalInternshipApplications,
@@ -51,6 +51,9 @@ export const getStats = async (req, res) => {
             User.countDocuments({ role: 'recruiter' }),
             User.countDocuments({ role: 'admin' }),
             User.countDocuments({ role: 'student', status: 'pending' }),
+            User.countDocuments({ role: 'student', status: 'approved' }),
+            User.countDocuments({ role: 'student', status: 'rejected' }),
+            User.countDocuments({ role: 'student', status: { $nin: ['approved', 'pending', 'rejected'] } }),
             Company.countDocuments(),
             Company.countDocuments({ verified: true }),
             Job.countDocuments(),
@@ -101,7 +104,7 @@ export const getStats = async (req, res) => {
 
         return res.status(200).json({
             stats: {
-                users: { total: totalUsers, students: totalStudents, recruiters: totalRecruiters, admins: totalAdmins, pendingStudents },
+                users: { total: totalUsers, students: totalStudents, recruiters: totalRecruiters, admins: totalAdmins, pendingStudents, approvedStudents, rejectedStudents, unclassifiedStudents },
                 companies: { total: totalCompanies, verified: verifiedCompanies, pending: totalCompanies - verifiedCompanies },
                 jobs: { total: totalJobs },
                 internships: { total: totalInternships },

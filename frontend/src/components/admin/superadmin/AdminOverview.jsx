@@ -128,7 +128,12 @@ const AdminOverview = () => {
                         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Users</h2>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <StatCard icon={Users} label="Total Users" value={stats?.users?.total} color="primary" />
-                            <StatCard icon={Users} label="Students" value={stats?.users?.students} sub={`${stats?.users?.pendingStudents || 0} pending approval`} color="blue-400" />
+                            <StatCard icon={Users} label="Total students" value={stats?.users?.students} sub={[
+                                stats?.users?.approvedStudents != null && `${stats.users.approvedStudents} approved (visible to recruiters)`,
+                                `${stats?.users?.pendingStudents || 0} pending approval`,
+                                stats?.users?.rejectedStudents > 0 && `${stats.users.rejectedStudents} rejected`,
+                                stats?.users?.unclassifiedStudents > 0 && `${stats.users.unclassifiedStudents} with missing or invalid approval status`,
+                            ].filter(Boolean).join(' · ')} color="blue-400" />
                             <StatCard icon={Users} label="Recruiters" value={stats?.users?.recruiters} color="purple-400" />
                             <StatCard icon={ShieldCheck} label="Admins" value={stats?.users?.admins} color="pink-400" />
                         </div>
